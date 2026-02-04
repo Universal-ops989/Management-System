@@ -1,0 +1,225 @@
+<template>
+  <div class="date-selector">
+    <div class="select-group">
+      <select
+        v-model="localYear"
+        @change="updateValue"
+        :disabled="disabled"
+        class="year-select"
+      >
+        <option value="">Year</option>
+        <option
+          v-for="year in years"
+          :key="year"
+          :value="year"
+        >
+          {{ year }}
+        </option>
+      </select>
+      
+      <select
+        v-model="localMonth"
+        @change="updateValue"
+        :disabled="disabled"
+        class="month-select"
+      >
+        <option value="">Month</option>
+        <option
+          v-for="(month, index) in months"
+          :key="index"
+          :value="String(index + 1).padStart(2, '0')"
+        >
+          {{ month }}
+        </option>
+      </select>
+      
+      <select
+        v-model="localDay"
+        @change="updateValue"
+        :disabled="disabled"
+        class="day-select"
+      >
+        <option value="">Day</option>
+        <option
+          v-for="day in availableDays"
+          :key="day"
+          :value="String(day).padStart(2, '0')"
+        >
+          {{ day }}
+        </option>
+      </select>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, watch, computed } from 'vue';
+
+const props = defineProps({
+  modelValue: {
+    type: String,
+    default: ''
+  },
+  disabled: {
+    type: Boolean,
+    default: false
+  },
+  minYear: {
+    type: Number,
+    default: null
+  },
+  maxYear: {
+    type: Number,
+    default: null
+  }
+});
+
+const emit = defineEmits(['update:modelValue']);
+
+const months = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+];
+
+const currentYear = new Date().getFullYear();
+const defaultMinYear = props.minYear || currentYear - 10;
+const defaultMaxYear = props.maxYear || currentYear + 10;
+
+const years = computed(() => {
+  const yearList = [];
+  for (let year = defaultMinYear; year <= defaultMaxYear; year++) {
+    yearList.push(year);
+  }
+  return yearList.reverse(); // Most recent years first
+});
+
+const localYear = ref('');
+const localMonth = ref('');
+const localDay = ref('');
+
+// Get days in month
+const daysInMonth = computed(() => {
+  if (!localYear.value || !localMonth.value) {
+    return 31; // Default to 31 if month/year not selected
+  }
+  
+  const year = parseInt(localYear.value);
+  const month = parseInt(localMonth.value);
+  return new Date(year, month, 0).getDate();
+});
+
+// Available days based on selected month/year
+const availableDays = computed(() => {
+  const days = [];
+  for (let day = 1; day <= daysInMonth.value; day++) {
+    days.push(day);
+  }
+  return days;
+});
+
+// Parse modelValue (format: "YYYY-MM-DD")
+const parseValue = (value) => {
+  if (!value) {
+    localYear.value = '';
+    localMonth.value = '';
+    localDay.value = '';
+    return;
+  }
+  
+  const parts = value.split('-');
+  if (parts.length === 3) {
+    localYear.value = parts[0];
+    localMonth.value = parts[1];
+    localDay.value = parts[2];
+  } else {
+    localYear.value = '';
+    localMonth.value = '';
+    localDay.value = '';
+  }
+};
+
+// Update value when modelValue changes
+watch(() => props.modelValue, (newValue) => {
+  parseValue(newValue);
+}, { immediate: true });
+
+// Watch for month/year changes to adjust day if needed
+watch([localYear, localMonth], () => {
+  if (localDay.value) {
+    const day = parseInt(localDay.value);
+    if (day > daysInMonth.value) {
+      localDay.value = String(daysInMonth.value).padStart(2, '0');
+    }
+  }
+  updateValue();
+});
+
+// Emit update when local values change
+const updateValue = () => {
+  if (localYear.value && localMonth.value && localDay.value) {
+    const value = `${localYear.value}-${localMonth.value}-${localDay.value}`;
+    emit('update:modelValue', value);
+  } else {
+    emit('update:modelValue', '');
+  }
+};
+</script>
+
+<style scoped>
+.date-selector {
+  width: 100%;
+}
+
+.select-group {
+  display: flex;
+  gap: 8px;
+}
+
+.year-select,
+.month-select,
+.day-select {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border-medium);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.year-select:hover:not(:disabled),
+.month-select:hover:not(:disabled),
+.day-select:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.year-select:focus,
+.month-select:focus,
+.day-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.year-select:disabled,
+.month-select:disabled,
+.day-select:disabled {
+  background: var(--bg-tertiary);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.year-select option,
+.month-select option,
+.day-select option {
+  padding: 8px;
+}
+
+/* Make day selector slightly smaller */
+.day-select {
+  flex: 0.8;
+}
+</style>
+
