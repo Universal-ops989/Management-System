@@ -19,6 +19,13 @@ const freelancerAccountSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  group: {
+    type: String,
+    enum: ['NONE', 'GROUP 1', 'GROUP 2', 'GROUP 3', 'GROUP 4'],
+    default: 'NONE',
+    required: true,
+    index: true
+  },
   // Contact information
   email: {
     type: String,
@@ -89,6 +96,7 @@ const freelancerAccountSchema = new mongoose.Schema({
 freelancerAccountSchema.index({ ownerUserId: 1, status: 1 });
 freelancerAccountSchema.index({ status: 1, createdAt: -1 });
 freelancerAccountSchema.index({ country: 1, status: 1 });
+freelancerAccountSchema.index({ group: 1, status: 1 });
 freelancerAccountSchema.index({ email: 1 }); // For search/filtering
 freelancerAccountSchema.index({ name: 1, status: 1 }); // For search/filtering
 

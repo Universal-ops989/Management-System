@@ -3,6 +3,7 @@
     <table class="profiles-table">
       <thead>
         <tr>
+          <th>Group</th>
           <th>Name</th>
           <th>Country</th>
           <th>Contact</th>

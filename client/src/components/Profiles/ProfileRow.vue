@@ -1,13 +1,15 @@
 <template>
   <tr class="table-row-clickable" @click="$emit('view', profile)">
     <td>
+      <span>{{profile.group.replace(/_/g, ' ')
+        .toLowerCase()
+        .replace(/\b\w/g, c => c.toUpperCase())}}</span>
+    </td>
+    <td>
       <div class="name-cell">
         <div v-if="profile.pictureFileId">
-          <img
-            :src="getPictureUrl(profile.pictureFileId._id || profile.pictureFileId)"
-            alt="Profile"
-            class="table-avatar"
-          />
+          <img :src="getPictureUrl(profile.pictureFileId._id || profile.pictureFileId)" alt="Profile"
+            class="table-avatar" />
         </div>
         <span v-else class="table-avatar-placeholder">👤</span>
         <span>{{ profile.name }}</span>
@@ -23,17 +25,10 @@
     </td>
     <td>
       <div class="tags-cell">
-        <span
-          v-for="tag in (profile.tags || []).slice(0, 2)"
-          :key="tag"
-          class="tag-small"
-        >
+        <span v-for="tag in (profile.tags || []).slice(0, 2)" :key="tag" class="tag-small">
           {{ tag }}
         </span>
-        <span
-          v-if="profile.tags && profile.tags.length > 2"
-          class="tag-more"
-        >
+        <span v-if="profile.tags && profile.tags.length > 2" class="tag-more">
           +{{ profile.tags.length - 2 }}
         </span>
       </div>
@@ -47,18 +42,10 @@
     <td @click.stop>
       <div class="action-buttons">
         <button @click.stop="$emit('view', profile)" class="btn-view">View</button>
-        <button
-          v-if="canEdit"
-          @click.stop="$emit('edit', profile)"
-          class="btn-edit"
-        >
+        <button v-if="canEdit" @click.stop="$emit('edit', profile)" class="btn-edit">
           Edit
         </button>
-        <button
-          v-if="canDelete"
-          @click.stop="$emit('delete', profile)"
-          class="btn-delete"
-        >
+        <button v-if="canDelete" @click.stop="$emit('delete', profile)" class="btn-delete">
           Delete
         </button>
       </div>
@@ -85,32 +72,32 @@ const authStore = useAuthStore();
 const canEdit = computed(() => {
   if (!authStore.user || !props.profile) return false;
   const userRole = normalizeRole(authStore.user.role);
-  
-  if (props.profile.ownerUserId?._id === authStore.user._id || 
-      props.profile.ownerUserId === authStore.user._id) {
+
+  if (props.profile.ownerUserId?._id === authStore.user._id ||
+    props.profile.ownerUserId === authStore.user._id) {
     return true;
   }
-  
+
   if (userRole === ROLES.ADMIN || userRole === ROLES.SUPER_ADMIN) {
     return true;
   }
-  
+
   return false;
 });
 
 const canDelete = computed(() => {
   if (!authStore.user || !props.profile) return false;
   const userRole = normalizeRole(authStore.user.role);
-  
-  if (props.profile.ownerUserId?._id === authStore.user._id || 
-      props.profile.ownerUserId === authStore.user._id) {
+
+  if (props.profile.ownerUserId?._id === authStore.user._id ||
+    props.profile.ownerUserId === authStore.user._id) {
     return true;
   }
-  
+
   if (userRole === ROLES.ADMIN || userRole === ROLES.SUPER_ADMIN) {
     return true;
   }
-  
+
   return false;
 });
 
@@ -146,9 +133,11 @@ const displayPhone = (profile) => {
 .table-row-clickable:hover {
   background: #babdc0;
 }
-td{
+
+td {
   padding: 10px;
 }
+
 .name-cell {
   display: flex;
   align-items: center;

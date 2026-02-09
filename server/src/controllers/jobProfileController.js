@@ -200,6 +200,7 @@ export const createJobProfile = async (req, res, next) => {
       name: req.body.name,
       ownerUserId: ownerUserId,
       status: req.body.status || 'active',
+      group: req.body.group || 'NONE',
       email: req.body.email || '',
       phone: req.body.phone || '',
       country: req.body.country || '',
@@ -226,7 +227,7 @@ export const createJobProfile = async (req, res, next) => {
 
     await auditLog(req, 'JOB_PROFILE_CREATE', 'JOB_PROFILE', profile._id.toString(), {
       ...getRequestMeta(req),
-      profile: { name: profile.name, status: profile.status }
+      profile: { name: profile.name, status: profile.status, group: profile.group }
     });
 
     const sanitized = sanitizeJobProfile(req.user, profile.toObject ? profile.toObject() : profile);
@@ -304,6 +305,7 @@ export const updateJobProfile = async (req, res, next) => {
     // Update only provided fields
     if (req.body.name !== undefined) profile.name = req.body.name;
     if (req.body.status !== undefined) profile.status = req.body.status;
+    if (req.body.group !== undefined) profile.group = req.body.group;
     if (req.body.email !== undefined) profile.email = req.body.email || '';
     if (req.body.phone !== undefined) profile.phone = req.body.phone || '';
     if (req.body.country !== undefined) profile.country = req.body.country || '';

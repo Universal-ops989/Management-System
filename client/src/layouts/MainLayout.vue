@@ -2,7 +2,7 @@
   <div class="main-layout">
     <aside class="sidebar">
       <div class="sidebar-header">
-         <img src="/logo.png" style="width: 100%;" alt="G-M System Logo" class="logo" />
+        <img src="/logo.png" style="width: 100%;" alt="G-M System Logo" class="logo" />
       </div>
 
       <nav class="sidebar-nav">
@@ -65,7 +65,7 @@
             <span class="nav-arrow" :class="{ open: assignmentMenuOpen }">▼</span>
           </div> -->
 
-          <!-- <div class="nav-submenu">
+        <!-- <div class="nav-submenu">
             <router-link
               :to="{ name: 'Assignments' }"
               class="nav-item nav-subitem"
@@ -73,7 +73,7 @@
               <span class="nav-icon">📝</span>
               <span>Assignments</span>
             </router-link> -->
-          <!-- 
+        <!-- 
             <router-link
               :to="{ name: 'AssignmentCreate' }"
               class="nav-item nav-subitem"
@@ -82,14 +82,14 @@
               <span>New Assignment</span>
             </router-link> -->
 
-          <!-- <router-link
+        <!-- <router-link
               :to="{ name: 'EarningsTrend' }"
               class="nav-item nav-subitem"
             >
               <span class="nav-icon">📈</span>
               <span>Earnings Trend</span>
             </router-link> -->
-          <!-- </div> -->
+        <!-- </div> -->
         <!-- </div> -->
 
         <!-- =====================
@@ -201,6 +201,8 @@ const isFinanceAdmin = computed(() =>
 const isProfileRoute = computed(() => route.path.startsWith('/profiles'));
 const isAssignmentsRoute = computed(() => route.path.startsWith('/assignments'));
 const isFinanceRoute = computed(() => route.path.startsWith('/finance'));
+
+console.log("this is the user degree: ", authStore.user?.group)
 
 watch(
   () => route.path,
@@ -546,11 +548,11 @@ const handleLogout = async () => {
   .sidebar {
     width: 240px;
   }
-  
+
   .topbar {
     padding: 0 var(--spacing-lg);
   }
-  
+
   .main-content {
     padding: var(--spacing-lg);
   }
@@ -560,19 +562,19 @@ const handleLogout = async () => {
   .sidebar {
     width: 220px;
   }
-  
+
   .sidebar-header h2 {
     font-size: var(--font-size-xl);
   }
-  
+
   .page-title {
     font-size: var(--font-size-xl);
   }
-  
+
   .main-content {
     padding: var(--spacing-md);
   }
-  
+
   .user-email {
     display: none;
   }
@@ -582,18 +584,18 @@ const handleLogout = async () => {
   .main-layout {
     flex-direction: column;
   }
-  
+
   .sidebar {
     width: 100%;
     height: auto;
     max-height: 60vh;
   }
-  
+
   .topbar {
     height: 60px;
     padding: 0 var(--spacing-md);
   }
-  
+
   .page-title {
     font-size: var(--font-size-lg);
   }
