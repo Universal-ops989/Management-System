@@ -50,32 +50,32 @@ const userSchema = new mongoose.Schema({
 });
 
 // Hash password before saving
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function(next) {
   // Only hash if passwordHash is modified
   if (!this.isModified('passwordHash')) return next();
-
+  
   // Skip if passwordHash is empty (shouldn't happen due to required, but safety check)
   if (!this.passwordHash) {
     return next();
   }
-
+  
   // Check if already hashed (bcrypt hashes start with $2a$, $2b$, or $2y$)
   if (this.passwordHash.startsWith('$2a$') || this.passwordHash.startsWith('$2b$') || this.passwordHash.startsWith('$2y$')) {
     return next();
   }
-
+  
   // Hash the password
   this.passwordHash = await bcrypt.hash(this.passwordHash, 10);
   next();
 });
 
 // Method to compare password
-userSchema.methods.comparePassword = async function (candidatePassword) {
+userSchema.methods.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.passwordHash);
 };
 
 // Method to get user summary (without passwordHash)
-userSchema.methods.toSummary = function () {
+userSchema.methods.toSummary = function() {
   return {
     id: this._id,
     email: this.email,
