@@ -29,8 +29,10 @@
       <table class="users-table">
         <thead>
           <tr>
-            <th>Name</th>
+            <th>User</th>
             <th>Email</th>
+            <th>Group</th>
+            <th>Degree</th>
             <th>Role</th>
             <th>Status</th>
             <th>Editor</th>
@@ -42,6 +44,12 @@
           <tr v-for="user in users" :key="user.id">
             <td>{{ user.name }}</td>
             <td>{{ user.email }}</td>
+            <td>{{user.group.replace(/_/g, ' ')
+              .toLowerCase()
+              .replace(/\b\w/g, c => c.toUpperCase())}}</td>
+            <td>{{user.degree.replace(/_/g, ' ')
+              .toLowerCase()
+              .replace(/\b\w/g, c => c.toUpperCase())}}</td>
             <td>
               <span class="role-badge" :class="`role-${user.role.toLowerCase()}`">
                 {{ formatRole(user.role) }}
@@ -84,22 +92,37 @@
           <form @submit.prevent="handleSubmit">
             <div class="form-group">
               <label>Email *</label>
-              <input
-                v-model="form.email"
-                type="email"
-                required
-                :disabled="editingUser !== null"
-                placeholder="user@example.com"
-              />
+              <input v-model="form.email" type="email" required :disabled="editingUser !== null"
+                placeholder="user@example.com" />
             </div>
             <div class="form-group">
               <label>Name *</label>
-              <input
-                v-model="form.name"
-                type="text"
-                required
-                placeholder="Full Name"
-              />
+              <input v-model="form.name" type="text" required placeholder="Full Name" />
+            </div>
+            <!-- add group and member degree -->
+            <div class="form-row">
+              <div class="form-group">
+                <label>Group *</label>
+                <select v-model="form.group" required>
+                  <option value="SUPER_ADMIN">Super Admin</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="GROUP 1">Group 1</option>
+                  <option value="GROUP 2">Group 2</option>
+                  <option value="GROUP 3">Group 3</option>
+                  <option value="GROUP 4">Group 4</option>
+                  <!-- <option v-if="isSuperAdmin" value="SUPER_ADMIN">Super Admin</option> -->
+                  <!-- Legacy BOSS option removed - will be auto-converted to ADMIN if used -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Degree *</label>
+                <select v-model="form.degree" required>
+                  <option value="SUPER_ADMIN">Super Admin</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="TEAM_BOSS">Team Boss</option>
+                  <option value="MEMBER">Member</option>
+                </select>
+              </div>
             </div>
             <div class="form-row">
               <div class="form-group">
@@ -168,6 +191,8 @@ const isSuperAdmin = computed(() => authStore.user?.role === ROLES.SUPER_ADMIN);
 const form = ref({
   email: '',
   name: '',
+  group: 'GROUP 1',
+  member: 'MEMBER',
   role: 'MEMBER',
   status: 'active',
   editor: false
@@ -194,6 +219,8 @@ const openCreateModal = () => {
   form.value = {
     email: '',
     name: '',
+    group: 'GROUP 1',
+    degree: 'MEMBER',
     role: 'MEMBER',
     status: 'active',
     editor: false
@@ -207,6 +234,8 @@ const openEditModal = (user) => {
   form.value = {
     email: user.email,
     name: user.name,
+    group: user.group,
+    degree: user.degree,
     role: user.role,
     status: user.status,
     editor: user.editor || false
@@ -228,6 +257,8 @@ const handleSubmit = async () => {
     if (editingUser.value) {
       // Update user
       const response = await adminService.updateUser(editingUser.value.id, {
+        group: form.value?.group,
+        degree: form.value?.degree,
         role: form.value.role,
         status: form.value.status,
         editor: form.value.editor
@@ -368,8 +399,13 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .users-table-container {
@@ -726,28 +762,28 @@ onMounted(() => {
   .page-header {
     padding: var(--spacing-lg);
   }
-  
+
   .page-header h1 {
     font-size: var(--font-size-2xl);
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .users-table {
     font-size: var(--font-size-xs);
   }
-  
+
   .users-table th,
   .users-table td {
     padding: var(--spacing-md);
   }
-  
+
   .action-buttons {
     flex-direction: column;
   }
-  
+
   .btn-edit,
   .btn-reset {
     width: 100%;

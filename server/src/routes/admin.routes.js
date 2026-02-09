@@ -16,12 +16,16 @@ router.use(requireAuth);
 const createUserSchema = z.object({
   email: z.string().email('Invalid email format'),
   name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name too long'),
+  group: z.enum(['SUPER_ADMIN', 'ADMIN', 'GROUP 1', 'GROUP 2', 'GROUP 3', 'GROUP 4']).optional(),
+  degree: z.enum(['SUPER_ADMIN', 'ADMIN', 'TEAM_BOSS', 'MEMBER']).optional(),
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MEMBER', 'GUEST', 'BOSS']).optional(), // BOSS for backward compatibility
   editor: z.boolean().optional(),
   status: z.enum(['active', 'disabled', 'pending']).optional()
 });
 
 const updateUserSchema = z.object({
+  group: z.enum(['SUPER_ADMIN', 'ADMIN', 'GROUP 1', 'GROUP 2', 'GROUP 3', 'GROUP 4']).optional(),
+  degree: z.enum(['SUPER_ADMIN', 'ADMIN', 'TEAM_BOSS', 'MEMBER']).optional(),
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MEMBER', 'GUEST', 'BOSS']).optional(), // BOSS for backward compatibility
   editor: z.boolean().optional(),
   status: z.enum(['active', 'disabled', 'pending']).optional()
@@ -32,6 +36,8 @@ router.get('/users', async (req, res, next) => {
   try {
     const {
       search = '',
+      group = '',
+      degree = '',
       role = '',
       status = '',
       page = '1',
@@ -44,18 +50,26 @@ router.get('/users', async (req, res, next) => {
 
     // Build query
     const query = {};
-    
+
     if (search) {
       query.$or = [
         { email: { $regex: search, $options: 'i' } },
         { name: { $regex: search, $options: 'i' } }
       ];
     }
-    
+
+    if (group) {
+      query.group = group;
+    }
+
+    if (degree) {
+      query.degree = degree;
+    }
+
     if (role) {
       query.role = role;
     }
-    
+
     if (status) {
       query.status = status;
     }
@@ -76,6 +90,8 @@ router.get('/users', async (req, res, next) => {
       id: user._id,
       email: user.email,
       name: user.name,
+      group: user.group,
+      degree: user.degree,
       role: user.role,
       editor: user.editor,
       status: user.status,
@@ -101,7 +117,7 @@ router.get('/users', async (req, res, next) => {
 router.post('/users', async (req, res, next) => {
   try {
     const validatedData = createUserSchema.parse(req.body);
-    
+
     // Check if user already exists
     const existingUser = await User.findOne({ email: validatedData.email.toLowerCase() });
     if (existingUser) {
@@ -129,6 +145,8 @@ router.post('/users', async (req, res, next) => {
       email: validatedData.email.toLowerCase(),
       passwordHash,
       name: validatedData.name,
+      group: validatedData.group || 'GROUP 1',
+      degree: validatedData.degree || 'MEMBER',
       role: validatedData.role || 'MEMBER',
       editor: validatedData.editor || false,
       status: validatedData.status || 'pending'
@@ -142,6 +160,8 @@ router.post('/users', async (req, res, next) => {
       createdUser: {
         email: user.email,
         name: user.name,
+        group: user.group,
+        degree: user.degree,
         role: user.role,
         editor: user.editor,
         status: user.status
@@ -191,7 +211,7 @@ router.put('/users/:id', async (req, res, next) => {
     if (validatedData.role === 'BOSS') {
       validatedData.role = 'ADMIN';
     }
-    
+
     // Only SUPER_ADMIN can update SUPER_ADMIN
     if (user.role === 'SUPER_ADMIN' && req.user.role !== 'SUPER_ADMIN') {
       return res.status(403).json(createErrorResponse(
@@ -209,11 +229,11 @@ router.put('/users/:id', async (req, res, next) => {
         403
       ));
     }
-    
+
     // Only SUPER_ADMIN or ADMIN can assign ADMIN role
-    if (validatedData.role === 'ADMIN' && 
-        req.user.role !== 'SUPER_ADMIN' && 
-        !isAdminRole(req.user.role)) {
+    if (validatedData.role === 'ADMIN' &&
+      req.user.role !== 'SUPER_ADMIN' &&
+      !isAdminRole(req.user.role)) {
       return res.status(403).json(createErrorResponse(
         'INSUFFICIENT_PERMISSIONS',
         'Only SUPER_ADMIN or ADMIN can assign ADMIN role',
@@ -232,12 +252,16 @@ router.put('/users/:id', async (req, res, next) => {
 
     // Store old values for audit
     const oldValues = {
+      group: user.group,
+      degree: user.degree,
       role: user.role,
       status: user.status,
       editor: user.editor
     };
 
     // Update fields
+    if (validatedData.group !== undefined) user.group = validatedData.group;
+    if (validatedData.degree !== undefined) user.degree = validatedData.degree;
     if (validatedData.role !== undefined) user.role = validatedData.role;
     if (validatedData.status !== undefined) user.status = validatedData.status;
     if (validatedData.editor !== undefined) user.editor = validatedData.editor;
@@ -249,6 +273,8 @@ router.put('/users/:id', async (req, res, next) => {
       ...getRequestMeta(req),
       oldValues,
       newValues: {
+        group: user.group,
+        degree: user.degree,
         role: user.role,
         status: user.status,
         editor: user.editor
@@ -308,6 +334,8 @@ router.post('/users/:id/reset-password', async (req, res, next) => {
       resetUser: {
         email: user.email,
         name: user.name,
+        group: user.group,
+        degree: user.degree,
         role: user.role
       }
     });
@@ -321,4 +349,3 @@ router.post('/users/:id/reset-password', async (req, res, next) => {
 });
 
 export default router;
-

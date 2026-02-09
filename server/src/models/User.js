@@ -19,6 +19,16 @@ const userSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  group: {
+    type: String,
+    enum: ['SUPER_ADMIN', 'ADMIN', 'GROUP 1', 'GROUP 2', 'GROUP 3', 'GROUP 4'],
+    required: true
+  },
+  degree: {
+    type: String,
+    enum: ['SUPER_ADMIN', 'ADMIN', 'TEAM_BOSS', 'MEMBER'],
+    required: true
+  },
   role: {
     type: String,
     enum: ['SUPER_ADMIN', 'ADMIN', 'MEMBER', 'GUEST', 'BOSS'], // BOSS kept for backward compatibility
@@ -40,36 +50,38 @@ const userSchema = new mongoose.Schema({
 });
 
 // Hash password before saving
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   // Only hash if passwordHash is modified
   if (!this.isModified('passwordHash')) return next();
-  
+
   // Skip if passwordHash is empty (shouldn't happen due to required, but safety check)
   if (!this.passwordHash) {
     return next();
   }
-  
+
   // Check if already hashed (bcrypt hashes start with $2a$, $2b$, or $2y$)
   if (this.passwordHash.startsWith('$2a$') || this.passwordHash.startsWith('$2b$') || this.passwordHash.startsWith('$2y$')) {
     return next();
   }
-  
+
   // Hash the password
   this.passwordHash = await bcrypt.hash(this.passwordHash, 10);
   next();
 });
 
 // Method to compare password
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.passwordHash);
 };
 
 // Method to get user summary (without passwordHash)
-userSchema.methods.toSummary = function() {
+userSchema.methods.toSummary = function () {
   return {
     id: this._id,
     email: this.email,
     name: this.name,
+    group: this.group,
+    degree: this.degree,
     role: this.role,
     editor: this.editor,
     status: this.status,

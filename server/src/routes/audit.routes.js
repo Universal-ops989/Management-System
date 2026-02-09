@@ -61,6 +61,8 @@ router.get('/audit-logs', requireAuth, async (req, res, next) => {
         id: log.actorUserId._id,
         email: log.actorUserId.email,
         name: log.actorUserId.name,
+        group: log.actorUserId.group,
+        degree: log.actorUserId.degree,
         role: log.actorUserId.role
       } : null,
       action: log.action,
