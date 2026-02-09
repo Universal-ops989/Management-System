@@ -136,6 +136,7 @@ export const createFreelancerAccount = async (req, res, next) => {
       name: req.body.name,
       ownerUserId: req.user._id,
       status: req.body.status || 'active',
+      group: req.body.group || 'NONE',
       email: req.body.email || '',
       anydeskId: req.body.anydeskId || '',
       accessNotes: req.body.accessNotes || '',
@@ -183,6 +184,7 @@ export const updateFreelancerAccount = async (req, res, next) => {
     Object.assign(account, {
       name: req.body.name ?? account.name,
       status: req.body.status ?? account.status,
+      group: req.body.group ?? account.group,
       email: req.body.email ?? account.email,
       anydeskId: req.body.anydeskId ?? account.anydeskId,
       accessNotes: req.body.accessNotes ?? account.accessNotes

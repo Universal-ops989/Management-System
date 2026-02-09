@@ -19,6 +19,12 @@ const jobProfileSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  group: {
+    type: String,
+    enum: ['NONE', 'GROUP 1', 'GROUP 2', 'GROUP 3', 'GROUP 4'],
+    required: true,
+    index: true
+  },
   // Contact information
   email: {
     type: String,
@@ -93,6 +99,7 @@ const jobProfileSchema = new mongoose.Schema({
 jobProfileSchema.index({ ownerUserId: 1, status: 1 });
 jobProfileSchema.index({ status: 1, createdAt: -1 });
 jobProfileSchema.index({ country: 1, status: 1 });
+jobProfileSchema.index({ group: 1, status: 1 });
 jobProfileSchema.index({ email: 1 }); // For search/filtering
 jobProfileSchema.index({ name: 1, status: 1 }); // For search/filtering
 

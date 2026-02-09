@@ -14,6 +14,16 @@
           <option value="archived">Archived</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>Group *</label>
+        <select v-model="form.group" required>
+          <option value="NONE">None</option>
+          <option value="GROUP 1">Group 1</option>
+          <option value="GROUP 2">Group 2</option>
+          <option value="GROUP 3">Group 3</option>
+          <option value="GROUP 4">Group 4</option>
+        </select>
+      </div>
     </div>
 
     <!-- Contact Information Section -->
@@ -161,6 +171,7 @@ const canEditSensitiveFields = computed(() => {
 const form = ref({
   name: '',
   status: 'active',
+  group: "NONE",
   email: '',
   phone: '',
   country: '',
@@ -182,6 +193,7 @@ function resetForm() {
   form.value = {
     name: '',
     status: 'active',
+    group: 'NONE',
     email: '',
     phone: '',
     country: '',
@@ -210,6 +222,7 @@ watch(() => props.profile, (newProfile) => {
     form.value = {
       name: newProfile.name || '',
       status: newProfile.status || 'active',
+      group: newProfile.group || 'NONE',
       email: newProfile.email || '',
       phone: newProfile.phone || '',
       country: newProfile.country || '',
