@@ -209,6 +209,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useFinance } from '../composables/useFinance';
 import { useAuthStore } from '../composables/useAuth';
 import { fetchUsers } from '../services/users';
+import { excludeSuperAdmin } from '../utils/userFilters';
 import { formatCurrency, formatMonth, getCurrentMonth } from '../utils/financeHelpers';
 import MonthlyPlanDrawer from '../components/finance/MonthlyPlanDrawer.vue';
 import MonthlyPlanModal from '../components/finance/MonthlyPlanModal.vue';
@@ -461,7 +462,7 @@ const loadData = async () => {
     // Load users
     const usersResponse = await fetchUsers();
     if (usersResponse.ok && usersResponse.data) {
-      allUsers.value = usersResponse.data.users || [];
+      allUsers.value = excludeSuperAdmin(usersResponse.data.users || []);
       
       // Auto-select "All" if none selected
       if (!selectedUserId.value) {

@@ -29,14 +29,15 @@
             <button @click="openShareModal(board)" class="btn-icon" title="Share">
               👥
             </button>
-            <button v-if="canDelete(board)" @click="confirmDelete(board)" class="btn-icon btn-delete-icon" title="Delete">
+            <button v-if="canDelete(board)" @click="confirmDelete(board)" class="btn-icon btn-delete-icon"
+              title="Delete">
               🗑️
             </button>
           </div>
         </div>
-        
+
         <p v-if="board.description" class="board-description">{{ board.description }}</p>
-        
+
         <div class="board-meta">
           <span :class="['visibility-badge', `visibility-${board.visibility}`]">
             {{ board.visibility }}
@@ -45,7 +46,7 @@
             {{ board.status }}
           </span>
         </div>
-        
+
         <div class="board-footer">
           <span class="board-owner">
             <span class="owner-label">Owner:</span> {{ board.ownerUserId?.name || board.ownerUserId?.email }}
@@ -55,7 +56,7 @@
           </span>
         </div>
       </div>
-      
+
       <div v-if="boards.length === 0" class="empty-state">
         <p>No boards found. Create your first interview board to get started!</p>
         <button @click="openCreateModal" class="btn-create">Create Board</button>
@@ -123,23 +124,19 @@
               <option value="team">Team (All members)</option>
             </select>
           </div>
-          
+
           <div v-if="shareForm.visibility === 'shared'" class="form-group">
             <label>Share With Users</label>
             <div class="users-list">
               <div v-for="user in availableUsers" :key="user._id || user.id" class="user-checkbox">
                 <label>
-                  <input
-                    type="checkbox"
-                    :value="user._id || user.id"
-                    v-model="shareForm.sharedWith"
-                  />
+                  <input type="checkbox" :value="user._id || user.id" v-model="shareForm.sharedWith" />
                   <span>{{ user.name }} ({{ user.email }})</span>
                 </label>
               </div>
             </div>
           </div>
-          
+
           <div class="form-actions">
             <button type="button" @click="closeShareModal" class="btn-cancel">Cancel</button>
             <button @click="handleShareSubmit" :disabled="saving" class="btn-save">
@@ -220,7 +217,7 @@ const loadUsers = async () => {
   try {
     const response = await userService.fetchUsers();
     if (response.ok && response.data) {
-      users.value = response.data.users || [];
+      users.value = excludeSuperAdmin(response.data.users || []);
     }
   } catch (err) {
     console.error('Failed to load users:', err);
@@ -389,8 +386,13 @@ onMounted(async () => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .btn-retry {
@@ -699,4 +701,3 @@ onMounted(async () => {
   cursor: not-allowed;
 }
 </style>
-

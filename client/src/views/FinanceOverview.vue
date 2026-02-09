@@ -12,6 +12,7 @@ import { formatMonth } from '../utils/financeHelpers'
 import * as financeService from '../services/finance'
 import { useAuthStore } from '../stores/auth'
 import { fetchUsers } from '../services/users'
+import { excludeSuperAdmin, excludeSuperAdminFromMetrics } from '../utils/userFilters'
 
 /* ===============================
    STATE
@@ -122,7 +123,7 @@ const loadFinanceOverview = async () => {
       })
       // Store the full period object, not just the definition
       currentWeekPeriod.value = sortedPeriods.length > 0 ? sortedPeriods[0] : null
-      
+
       // Load periodic plans for the current week period (respects user selection)
       if (currentWeekPeriod.value) {
         const periodicPlansResponse = await financeService.fetchPeriodicPlans({
@@ -145,7 +146,7 @@ const loadFinanceOverview = async () => {
     setTimeout(() => {
       const monthProgress = Number(computedMonthMetrics.value?.progressPercentage) || 0
       const weekProgress = Number(computedWeekMetrics.value?.progressPercentage) || 0
-      
+
       // Month: ONLY show if >= 100%, otherwise hide
       if (monthProgress >= 100) {
         showMonthFlowerShower.value = true
@@ -155,7 +156,7 @@ const loadFinanceOverview = async () => {
       } else {
         showMonthFlowerShower.value = false
       }
-      
+
       // Week: ONLY show if >= 100%, otherwise hide
       if (weekProgress >= 100) {
         showWeekFlowerShower.value = true
@@ -192,7 +193,8 @@ const loadRankingData = async () => {
 const loadUsers = async () => {
   try {
     const res = await fetchUsers();
-    users.value = res.data.users || [];
+    // Exclude super admin from user list
+    users.value = excludeSuperAdmin(res.data.users || []);
   } catch (err) {
     if (err.response?.status === 403) {
       // Not admin → allowed fallback
@@ -232,12 +234,12 @@ const weekMetrics = computed(() => {
   const weeks = metrics.value?.week ?? []
   console.log('weekMetrics computed: Raw weeks from API', weeks)
   console.log('weekMetrics computed: weeks length', weeks.length)
-  
+
   if (weeks.length === 0) {
     console.log('weekMetrics computed: No weeks found')
     return []
   }
-  
+
   // Sort weeks in ascending order (week1, week2, week3...)
   const sorted = [...weeks].sort((a, b) => {
     // Extract week number from period string (e.g., "Week 1" -> 1)
@@ -245,7 +247,7 @@ const weekMetrics = computed(() => {
     const weekB = parseInt(b.period?.replace(/[^0-9]/g, '') || '0')
     return weekA - weekB
   })
-  
+
   console.log('weekMetrics computed: Sorted weeks', sorted)
   return sorted
 })
@@ -279,12 +281,16 @@ const getIncomeDistributionData = (metricsData) => {
 const getRankingData = (metricsData) => {
   if (!metricsData?.byUser) return []
 
-  return metricsData.byUser
+  // Exclude super admin from rankings
+  const filteredByUser = excludeSuperAdminFromMetrics(metricsData.byUser);
+  if (!filteredByUser.length) return []
+
+  return filteredByUser
     .map(user => ({
       label: user.user.name || user.user.email,
       value: user.actualIncome
     }))
-    .filter(item => item.value >=0)
+    .filter(item => item.value >= 0)
     .sort((a, b) => b.value - a.value) // Sort descending
 }
 
@@ -292,7 +298,11 @@ const getRankingData = (metricsData) => {
 const getProfitRankingData = (metricsData) => {
   if (!metricsData?.byUser) return []
 
-  return metricsData.byUser
+  // Exclude super admin from rankings
+  const filteredByUser = excludeSuperAdminFromMetrics(metricsData.byUser);
+  if (!filteredByUser.length) return []
+
+  return filteredByUser
     .map(user => {
       const profit = (user.actualIncome || 0) - (user.actualExpense || 0)
       return {
@@ -308,19 +318,23 @@ const getProfitRankingData = (metricsData) => {
 const getProgressRankingData = (metricsData) => {
   if (!metricsData?.byUser) return []
 
-  return metricsData.byUser
+  // Exclude super admin from rankings
+  const filteredByUser = excludeSuperAdminFromMetrics(metricsData.byUser);
+  if (!filteredByUser.length) return []
+
+  return filteredByUser
     .map(user => {
       const income = user.actualIncome || 0
       const outcome = user.actualExpense || 0
       const profit = income - outcome
       const pending = user.pendingIncome || 0
       const plan = user.target || 0
-      
+
       // Calculate progress percentage: (total profit + pending amount / 2) / total plan * 100
-      const progressPercentage = plan > 0 
+      const progressPercentage = plan > 0
         ? Math.round(((profit + pending / 2) / plan) * 100)
         : 0
-      
+
       return {
         label: user.user.name || user.user.email,
         value: Math.max(0, progressPercentage) // Allow > 100%
@@ -334,7 +348,11 @@ const getProgressRankingData = (metricsData) => {
 const getUserSummaryData = (metricsData) => {
   if (!metricsData?.byUser) return []
 
-  return metricsData.byUser
+  // Exclude super admin from summary
+  const filteredByUser = excludeSuperAdminFromMetrics(metricsData.byUser);
+  if (!filteredByUser.length) return []
+
+  return filteredByUser
     .map(user => {
       const income = user.actualIncome || 0
       const outcome = user.actualExpense || 0
@@ -342,9 +360,9 @@ const getUserSummaryData = (metricsData) => {
       const pending = user.pendingIncome || 0
       const plan = user.target || 0
       const resultAmount = profit - plan
-      
+
       // Calculate progress percentage: (total profit + pending amount / 2) / total plan * 100
-      const progressPercentage = plan > 0 
+      const progressPercentage = plan > 0
         ? Math.round(((profit + pending / 2) / plan) * 100)
         : 0
 
@@ -375,7 +393,7 @@ const getTargetAchievementData = (metricsData) => {
   return [
     { label: 'Achieved', value: achieved },
     { label: 'Remaining', value: remaining }
-  ].filter(item => item.value >=0)
+  ].filter(item => item.value >= 0)
 }
 
 // Computed for performance breakdown pie chart
@@ -387,7 +405,7 @@ const getPerformanceBreakdownData = (metricsData) => {
     { label: 'Actual Income', value: total.actualIncome },
     { label: 'Pending Income', value: total.pendingIncome },
     { label: 'Actual Expense', value: total.actualExpense }
-  ].filter(item => item.value >=0)
+  ].filter(item => item.value >= 0)
 }
 
 // Ranking metrics (always all members)
@@ -421,13 +439,13 @@ const selectedWeekData = computed(() => {
 // Get the last active week from weekMetrics (for Week Overview)
 const lastActiveWeek = computed(() => {
   if (!weekMetrics.value || weekMetrics.value.length === 0) return null
-  
+
   // Find the week that matches the currentWeekPeriod definition
   if (currentWeekPeriod.value?.definition) {
     const matchedWeek = weekMetrics.value.find(w => w.period === currentWeekPeriod.value.definition)
     if (matchedWeek) return matchedWeek
   }
-  
+
   // If no match, return the last week in the array (assuming it's sorted by date)
   return weekMetrics.value[weekMetrics.value.length - 1]
 })
@@ -477,20 +495,20 @@ const computedMonthMetrics = computed(() => {
   const totalOutcome = total.actualExpense || 0
   const totalProfit = totalIncome - totalOutcome
   const totalPending = total.pendingIncome || 0
-  
+
   // Get total monthly plan
   const totalPlan = monthlyPlans.value.reduce((sum, plan) => {
     return sum + (plan.monthlyFinancialGoal || 0)
   }, 0) || total.target || 0
-  
+
   // Calculate result amount (profit - plan) - positive means ahead, negative means behind
   const resultAmount = totalProfit - totalPlan
-  
+
   // Calculate progress percentage: (total profit + pending amount / 2) / total plan * 100
-  const progressPercentage = totalPlan > 0 
+  const progressPercentage = totalPlan > 0
     ? Math.round(((totalProfit + totalPending / 2) / totalPlan) * 100)
     : 0
-  
+
   return {
     totalIncome,
     totalOutcome,
@@ -521,18 +539,18 @@ const computedWeekMetrics = computed(() => {
   const totalOutcome = total.actualExpense || 0
   const totalProfit = totalIncome - totalOutcome
   const totalPending = total.pendingIncome || 0
-  
+
   // Use target from weekMetrics API response (it already has the correct plan)
   const totalPlan = total.target || 0
-  
+
   // Calculate result amount (profit - plan) - positive means ahead, negative means behind
   const resultAmount = totalProfit - totalPlan
-  
+
   // Calculate progress percentage: (total profit + pending amount / 2) / total plan * 100
-  const progressPercentage = totalPlan > 0 
+  const progressPercentage = totalPlan > 0
     ? Math.round(((totalProfit + totalPending / 2) / totalPlan) * 100)
     : 0
-  
+
   return {
     totalIncome,
     totalOutcome,
@@ -584,9 +602,9 @@ const computedWeekMetricsList = computed(() => {
     console.log('computedWeekMetricsList: No weekMetrics data', weekMetrics.value)
     return []
   }
-  
+
   console.log('computedWeekMetricsList: Processing weeks', weekMetrics.value.length, weekMetrics.value)
-  
+
   return weekMetrics.value.map((week, index) => {
     const total = week.total || {}
     const totalIncome = total.actualIncome || 0
@@ -595,12 +613,12 @@ const computedWeekMetricsList = computed(() => {
     const totalPending = total.pendingIncome || 0
     const totalPlan = total.target || 0
     const resultAmount = totalProfit - totalPlan
-    
+
     // Calculate progress percentage: (total profit + pending amount / 2) / total plan * 100
-    const progressPercentage = totalPlan > 0 
+    const progressPercentage = totalPlan > 0
       ? Math.round(((totalProfit + totalPending / 2) / totalPlan) * 100)
       : 0
-    
+
     const weekData = {
       period: week.period || `Week ${index + 1}`,
       totalIncome,
@@ -611,7 +629,7 @@ const computedWeekMetricsList = computed(() => {
       resultAmount,
       progressPercentage: Math.max(0, progressPercentage)
     }
-    
+
     console.log(`computedWeekMetricsList: Week ${index + 1}`, weekData)
     return weekData
   })
@@ -622,11 +640,11 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   // Get current progress values - ensure they are numbers
   const monthProgress = Number(monthMetrics?.progressPercentage) || 0
   const weekProgress = Number(weekMetrics?.progressPercentage) || 0
-  
+
   // Get old progress values - ensure they are numbers
   const oldMonthProgress = oldMonthMetrics ? (Number(oldMonthMetrics.progressPercentage) || 0) : null
   const oldWeekProgress = oldWeekMetrics ? (Number(oldWeekMetrics.progressPercentage) || 0) : null
-  
+
   // Month Overview - Flower Shower (ONLY when >= 100%)
   // CRITICAL: Always hide if progress < 100%
   if (monthProgress < 100) {
@@ -641,7 +659,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
       }, 3000)
     }, 200)
   }
-  
+
   // Week Overview - Flower Shower (ONLY when >= 100%)
   // CRITICAL: Always hide if progress < 100%
   if (weekProgress < 100) {
@@ -713,17 +731,14 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
             Finance Overview
           </h2>
         </div>
-        
+
         <!-- Month and Week Overview -->
         <div class="overview-cards">
           <!-- Month Overview -->
           <div class="overview-card">
             <!-- Month Flower Shower Animation -->
-            <FlowerShower 
-              :show="showMonthFlowerShower" 
-              :duration="3000"
-            />
-            
+            <FlowerShower :show="showMonthFlowerShower" :duration="3000" />
+
             <div class="overview-card-header">
               <h3>{{ formatMonth(selectedMonth) }} - Month Overview</h3>
             </div>
@@ -740,7 +755,8 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
                 <div class="metric-row profit-highlight">
                   <span class="metric-label">Total Profit:</span>
-                  <span class="metric-value profit-value" :class="computedMonthMetrics.totalProfit >= 0 ? 'income-value' : 'expense-value'">
+                  <span class="metric-value profit-value"
+                    :class="computedMonthMetrics.totalProfit >= 0 ? 'income-value' : 'expense-value'">
                     {{ formatAmount(computedMonthMetrics.totalProfit) }}
                   </span>
                 </div>
@@ -750,26 +766,23 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
                 <div class="metric-row">
                   <span class="metric-label">Result Amount:</span>
-                  <span class="metric-value" :class="computedMonthMetrics.resultAmount >= 0 ? 'income-value' : 'expense-value'">
+                  <span class="metric-value"
+                    :class="computedMonthMetrics.resultAmount >= 0 ? 'income-value' : 'expense-value'">
                     {{ formatAmount(computedMonthMetrics.resultAmount) }}
                   </span>
                 </div>
                 <div class="progress-section progress-highlight">
                   <div class="progress-header">
                     <span class="progress-label">Progress</span>
-                    <span class="progress-percentage"><strong>{{ computedMonthMetrics.progressPercentage }}%</strong></span>
+                    <span class="progress-percentage"><strong>{{ computedMonthMetrics.progressPercentage
+                        }}%</strong></span>
                   </div>
                   <div class="progress-bar-container">
-                    <div
-                      class="progress-bar-fill"
+                    <div class="progress-bar-fill"
                       :class="{ 'progress-overflow': computedMonthMetrics.progressPercentage > 100 }"
-                      :style="{ width: `${Math.min(computedMonthMetrics.progressPercentage, 100)}%` }"
-                    ></div>
-                    <div
-                      v-if="computedMonthMetrics.progressPercentage > 100"
-                      class="progress-bar-overflow"
-                      :style="{ width: `${computedMonthMetrics.progressPercentage - 100}%` }"
-                    ></div>
+                      :style="{ width: `${Math.min(computedMonthMetrics.progressPercentage, 100)}%` }"></div>
+                    <div v-if="computedMonthMetrics.progressPercentage > 100" class="progress-bar-overflow"
+                      :style="{ width: `${computedMonthMetrics.progressPercentage - 100}%` }"></div>
                   </div>
                   <div class="progress-plan highlight-plan">
                     <span class="plan-label">Plan:</span>
@@ -777,22 +790,13 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                   </div>
                 </div>
               </div>
-              
+
               <!-- Right: Charts -->
               <div class="overview-charts-section">
-                <CircularProgressGauge
-                  :percentage="computedMonthMetrics.progressPercentage"
-                  label="Progress"
-                  :progress-color="computedMonthMetrics.progressPercentage >= 80 ? 'var(--color-success)' : computedMonthMetrics.progressPercentage >= 50 ? 'var(--color-warning)' : 'var(--color-primary)'"
-                />
-                <MiniDoughnutChart
-                  title="Income vs Outcome"
-                  :data="monthIncomeOutcomeData"
-                />
-                <MiniBarChart
-                  title="Comparison"
-                  :data="monthComparisonData"
-                />
+                <CircularProgressGauge :percentage="computedMonthMetrics.progressPercentage" label="Progress"
+                  :progress-color="computedMonthMetrics.progressPercentage >= 80 ? 'var(--color-success)' : computedMonthMetrics.progressPercentage >= 50 ? 'var(--color-warning)' : 'var(--color-primary)'" />
+                <MiniDoughnutChart title="Income vs Outcome" :data="monthIncomeOutcomeData" />
+                <MiniBarChart title="Comparison" :data="monthComparisonData" />
               </div>
             </div>
           </div>
@@ -800,11 +804,8 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
           <!-- Week Overview -->
           <div class="overview-card">
             <!-- Week Flower Shower Animation -->
-            <FlowerShower 
-              :show="showWeekFlowerShower" 
-              :duration="3000"
-            />
-            
+            <FlowerShower :show="showWeekFlowerShower" :duration="3000" />
+
             <div class="overview-card-header">
               <h3 v-if="lastActiveWeek">{{ lastActiveWeek.period }} - Week Overview</h3>
               <h3 v-else-if="currentWeekPeriod">{{ currentWeekPeriod.definition }} - Week Overview</h3>
@@ -823,7 +824,8 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
                 <div class="metric-row profit-highlight">
                   <span class="metric-label">Total Profit:</span>
-                  <span class="metric-value profit-value" :class="computedWeekMetrics.totalProfit >= 0 ? 'income-value' : 'expense-value'">
+                  <span class="metric-value profit-value"
+                    :class="computedWeekMetrics.totalProfit >= 0 ? 'income-value' : 'expense-value'">
                     {{ formatAmount(computedWeekMetrics.totalProfit) }}
                   </span>
                 </div>
@@ -833,26 +835,23 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
                 <div class="metric-row">
                   <span class="metric-label">Result Amount:</span>
-                  <span class="metric-value" :class="computedWeekMetrics.resultAmount >= 0 ? 'income-value' : 'expense-value'">
+                  <span class="metric-value"
+                    :class="computedWeekMetrics.resultAmount >= 0 ? 'income-value' : 'expense-value'">
                     {{ formatAmount(computedWeekMetrics.resultAmount) }}
                   </span>
                 </div>
                 <div class="progress-section progress-highlight">
                   <div class="progress-header">
                     <span class="progress-label">Progress</span>
-                    <span class="progress-percentage"><strong>{{ computedWeekMetrics.progressPercentage }}%</strong></span>
+                    <span class="progress-percentage"><strong>{{ computedWeekMetrics.progressPercentage
+                        }}%</strong></span>
                   </div>
                   <div class="progress-bar-container">
-                    <div
-                      class="progress-bar-fill"
+                    <div class="progress-bar-fill"
                       :class="{ 'progress-overflow': computedWeekMetrics.progressPercentage > 100 }"
-                      :style="{ width: `${Math.min(computedWeekMetrics.progressPercentage, 100)}%` }"
-                    ></div>
-                    <div
-                      v-if="computedWeekMetrics.progressPercentage > 100"
-                      class="progress-bar-overflow"
-                      :style="{ width: `${computedWeekMetrics.progressPercentage - 100}%` }"
-                    ></div>
+                      :style="{ width: `${Math.min(computedWeekMetrics.progressPercentage, 100)}%` }"></div>
+                    <div v-if="computedWeekMetrics.progressPercentage > 100" class="progress-bar-overflow"
+                      :style="{ width: `${computedWeekMetrics.progressPercentage - 100}%` }"></div>
                   </div>
                   <div class="progress-plan highlight-plan">
                     <span class="plan-label">Plan:</span>
@@ -860,29 +859,20 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                   </div>
                 </div>
               </div>
-              
+
               <!-- Right: Charts -->
               <div class="overview-charts-section">
-                <CircularProgressGauge
-                  :percentage="computedWeekMetrics.progressPercentage"
-                  label="Progress"
-                  :progress-color="computedWeekMetrics.progressPercentage >= 80 ? 'var(--color-success)' : computedWeekMetrics.progressPercentage >= 50 ? 'var(--color-warning)' : 'var(--color-primary)'"
-                />
-                <MiniDoughnutChart
-                  title="Income vs Outcome"
-                  :data="weekIncomeOutcomeData"
-                />
-                <MiniBarChart
-                  title="Comparison"
-                  :data="weekComparisonData"
-                />
+                <CircularProgressGauge :percentage="computedWeekMetrics.progressPercentage" label="Progress"
+                  :progress-color="computedWeekMetrics.progressPercentage >= 80 ? 'var(--color-success)' : computedWeekMetrics.progressPercentage >= 50 ? 'var(--color-warning)' : 'var(--color-primary)'" />
+                <MiniDoughnutChart title="Income vs Outcome" :data="weekIncomeOutcomeData" />
+                <MiniBarChart title="Comparison" :data="weekComparisonData" />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-            <!-- WEEKLY BREAKDOWN SECTION -->
+      <!-- WEEKLY BREAKDOWN SECTION -->
       <section v-if="computedWeekMetricsList && computedWeekMetricsList.length > 0" class="dashboard-section">
         <div class="section-header">
           <h2 class="section-title">
@@ -893,20 +883,14 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
 
         <!-- Weekly Cards Grid -->
         <div class="weekly-breakdown-grid">
-          <div 
-            v-for="(weekData, index) in computedWeekMetricsList" 
-            :key="weekData.period" 
-            class="week-card"
-            :class="{ 
-              'warning-low-progress': weekData.progressPercentage < 50,
-              'warning-critical': weekData.progressPercentage < 25,
-              'warning-severe': weekData.progressPercentage < 10
-            }"
-            :style="{ 
+          <div v-for="(weekData, index) in computedWeekMetricsList" :key="weekData.period" class="week-card" :class="{
+            'warning-low-progress': weekData.progressPercentage < 50,
+            'warning-critical': weekData.progressPercentage < 25,
+            'warning-severe': weekData.progressPercentage < 10
+          }" :style="{
               animationDelay: `${index * 0.1}s`,
               '--warning-intensity': weekData.progressPercentage < 50 ? (1 - weekData.progressPercentage / 50) : 0
-            }"
-          >
+            }">
             <!-- Week Header -->
             <div class="week-card-header">
               <h3 class="week-card-title">{{ weekData.period }}</h3>
@@ -937,7 +921,8 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 <div class="week-metric-icon profit-icon">📈</div>
                 <div class="week-metric-content">
                   <span class="week-metric-label">Profit</span>
-                  <span class="week-metric-value profit-value" :class="weekData.totalProfit >= 0 ? 'income-value' : 'expense-value'">
+                  <span class="week-metric-value profit-value"
+                    :class="weekData.totalProfit >= 0 ? 'income-value' : 'expense-value'">
                     {{ formatAmount(weekData.totalProfit) }}
                   </span>
                 </div>
@@ -955,7 +940,8 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 <div class="week-metric-icon result-icon">🎯</div>
                 <div class="week-metric-content">
                   <span class="week-metric-label">Result</span>
-                  <span class="week-metric-value" :class="weekData.resultAmount >= 0 ? 'income-value' : 'expense-value'">
+                  <span class="week-metric-value"
+                    :class="weekData.resultAmount >= 0 ? 'income-value' : 'expense-value'">
                     {{ formatAmount(weekData.resultAmount) }}
                   </span>
                 </div>
@@ -977,36 +963,29 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 <span class="week-progress-percentage">{{ weekData.progressPercentage }}%</span>
               </div>
               <div class="week-progress-bar-container">
-                <div
-                  class="week-progress-bar-fill"
+                <div class="week-progress-bar-fill"
                   :class="{ 'week-progress-overflow': weekData.progressPercentage > 100 }"
-                  :style="{ width: `${Math.min(weekData.progressPercentage, 100)}%` }"
-                ></div>
-                <div
-                  v-if="weekData.progressPercentage > 100"
-                  class="week-progress-bar-overflow"
-                  :style="{ width: `${weekData.progressPercentage - 100}%` }"
-                ></div>
+                  :style="{ width: `${Math.min(weekData.progressPercentage, 100)}%` }"></div>
+                <div v-if="weekData.progressPercentage > 100" class="week-progress-bar-overflow"
+                  :style="{ width: `${weekData.progressPercentage - 100}%` }"></div>
               </div>
             </div>
 
             <!-- Mini Chart -->
             <div class="week-mini-chart">
-              <MiniDoughnutChart
-                :title="weekData.period"
-                :data="[
-                  { label: 'Profit', value: Math.max(0, weekData.totalProfit) },
-                  { label: 'Plan', value: weekData.totalPlan },
-                  { label: 'Progress', value: weekData.totalPlan > 0 ? Math.max(0, (weekData.totalProfit + weekData.totalPending / 2)) : 0 }
-                ].filter(item => item.value > 0)"
-              />
+              <MiniDoughnutChart :title="weekData.period" :data="[
+                { label: 'Profit', value: Math.max(0, weekData.totalProfit) },
+                { label: 'Plan', value: weekData.totalPlan },
+                { label: 'Progress', value: weekData.totalPlan > 0 ? Math.max(0, (weekData.totalProfit + weekData.totalPending / 2)) : 0 }
+              ].filter(item => item.value > 0)" />
             </div>
           </div>
         </div>
       </section>
-            <!-- MONTH SUMMARY SECTION -->
+      <!-- MONTH SUMMARY SECTION -->
       <!-- MONTHLY RANKING SECTION -->
-      <section v-if="rankingMonthMetrics && rankingMonthMetrics.byUser && rankingMonthMetrics.byUser.length > 0" class="dashboard-section">
+      <section v-if="rankingMonthMetrics && rankingMonthMetrics.byUser && rankingMonthMetrics.byUser.length > 0"
+        class="dashboard-section">
         <div class="section-header">
           <h2 class="section-title">
             <span class="title-icon">🏆</span>
@@ -1017,24 +996,15 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
         <!-- Ranking Charts Row -->
         <div class="ranking-charts-row">
           <div class="ranking-chart-item progress-ranking-chart">
-            <FinanceRankingChart 
-              title="Progress Ranking" 
-              subtitle="Ranked by progress percentage" 
-              :data="monthProgressRankingData"
-              :formatAsPercentage="true"
-              v-if="monthProgressRankingData.length > 0" 
-            />
+            <FinanceRankingChart title="Progress Ranking" subtitle="Ranked by progress percentage"
+              :data="monthProgressRankingData" :formatAsPercentage="true" v-if="monthProgressRankingData.length > 0" />
             <div v-else class="empty-chart">
               <p>No progress data available</p>
             </div>
           </div>
           <div class="ranking-chart-item">
-            <FinanceRankingChart 
-              title="Profit Ranking" 
-              subtitle="Ranked by profit (Income - Outcome)" 
-              :data="monthProfitRankingData"
-              v-if="monthProfitRankingData.length > 0" 
-            />
+            <FinanceRankingChart title="Profit Ranking" subtitle="Ranked by profit (Income - Outcome)"
+              :data="monthProfitRankingData" v-if="monthProfitRankingData.length > 0" />
             <div v-else class="empty-chart">
               <p>No profit data available</p>
             </div>
@@ -1048,20 +1018,14 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
             Member Summary
           </h3>
           <div class="user-summary-grid">
-            <div 
-              v-for="(user, index) in monthUserSummaryData" 
-              :key="user.userId"
-              class="user-summary-card"
-              :class="{ 
-                'warning-low-progress': user.progressPercentage < 50,
-                'warning-critical': user.progressPercentage < 25,
-                'warning-severe': user.progressPercentage < 10
-              }"
-              :style="{ 
+            <div v-for="(user, index) in monthUserSummaryData" :key="user.userId" class="user-summary-card" :class="{
+              'warning-low-progress': user.progressPercentage < 50,
+              'warning-critical': user.progressPercentage < 25,
+              'warning-severe': user.progressPercentage < 10
+            }" :style="{
                 animationDelay: `${index * 0.1}s`,
                 '--warning-intensity': user.progressPercentage < 50 ? (1 - user.progressPercentage / 50) : 0
-              }"
-            >
+              }">
               <div class="user-summary-header">
                 <div class="user-rank-badge" :class="getRankBadgeClass(index)">
                   #{{ index + 1 }}
@@ -1071,7 +1035,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                   <p class="user-email" v-if="user.email && user.email !== user.name">{{ user.email }}</p>
                 </div>
               </div>
-              
+
               <div class="user-metrics-grid">
                 <div class="user-metric-item">
                   <div class="user-metric-icon income-icon">💰</div>
@@ -1093,7 +1057,8 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                   <div class="user-metric-icon profit-icon">📈</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Profit</span>
-                    <span class="user-metric-value profit-value" :class="user.profit >= 0 ? 'income-value' : 'expense-value'">
+                    <span class="user-metric-value profit-value"
+                      :class="user.profit >= 0 ? 'income-value' : 'expense-value'">
                       {{ formatAmount(user.profit) }}
                     </span>
                   </div>
@@ -1135,16 +1100,11 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                   </span>
                 </div>
                 <div class="user-progress-bar-container">
-                  <div
-                    class="user-progress-bar-fill"
+                  <div class="user-progress-bar-fill"
                     :class="{ 'user-progress-overflow': user.progressPercentage > 100 }"
-                    :style="{ width: `${Math.min(user.progressPercentage, 100)}%` }"
-                  ></div>
-                  <div
-                    v-if="user.progressPercentage > 100"
-                    class="user-progress-bar-overflow"
-                    :style="{ width: `${user.progressPercentage - 100}%` }"
-                  ></div>
+                    :style="{ width: `${Math.min(user.progressPercentage, 100)}%` }"></div>
+                  <div v-if="user.progressPercentage > 100" class="user-progress-bar-overflow"
+                    :style="{ width: `${user.progressPercentage - 100}%` }"></div>
                 </div>
               </div>
             </div>
@@ -1152,7 +1112,8 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
         </div>
       </section>
       <!-- YEARLY RANKING SECTION -->
-      <section v-if="rankingYearMetrics && rankingYearMetrics.byUser && rankingYearMetrics.byUser.length > 0" class="dashboard-section">
+      <section v-if="rankingYearMetrics && rankingYearMetrics.byUser && rankingYearMetrics.byUser.length > 0"
+        class="dashboard-section">
         <div class="section-header">
           <h2 class="section-title">
             <span class="title-icon">🏆</span>
@@ -1163,24 +1124,15 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
         <!-- Ranking Charts Row -->
         <div class="ranking-charts-row">
           <div class="ranking-chart-item progress-ranking-chart">
-            <FinanceRankingChart 
-              title="Progress Ranking" 
-              subtitle="Ranked by progress percentage" 
-              :data="yearProgressRankingData"
-              :formatAsPercentage="true"
-              v-if="yearProgressRankingData.length > 0" 
-            />
+            <FinanceRankingChart title="Progress Ranking" subtitle="Ranked by progress percentage"
+              :data="yearProgressRankingData" :formatAsPercentage="true" v-if="yearProgressRankingData.length > 0" />
             <div v-else class="empty-chart">
               <p>No progress data available</p>
             </div>
           </div>
           <div class="ranking-chart-item">
-            <FinanceRankingChart 
-              title="Profit Ranking" 
-              subtitle="Ranked by profit (Income - Outcome)" 
-              :data="yearProfitRankingData"
-              v-if="yearProfitRankingData.length > 0" 
-            />
+            <FinanceRankingChart title="Profit Ranking" subtitle="Ranked by profit (Income - Outcome)"
+              :data="yearProfitRankingData" v-if="yearProfitRankingData.length > 0" />
             <div v-else class="empty-chart">
               <p>No profit data available</p>
             </div>
@@ -1194,15 +1146,14 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
             Member Summary (All Months)
           </h3>
           <div class="user-summary-grid">
-            <div 
-              v-for="(user, index) in yearUserSummaryData" 
-              :key="user.userId"
-              class="user-summary-card"
-              :style="{ 
+            <div v-for="(user, index) in yearUserSummaryData" :key="user.userId" class="user-summary-card" :class="{
+              'warning-low-progress': user.progressPercentage < 50,
+              'warning-critical': user.progressPercentage < 25,
+              'warning-severe': user.progressPercentage < 10
+            }" :style="{
                 animationDelay: `${index * 0.1}s`,
                 '--warning-intensity': user.progressPercentage < 50 ? (1 - user.progressPercentage / 50) : 0
-              }"
-            >
+              }">
               <div class="user-summary-header">
                 <div class="user-rank-badge" :class="getRankBadgeClass(index)">
                   #{{ index + 1 }}
@@ -1212,7 +1163,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                   <p class="user-email" v-if="user.email && user.email !== user.name">{{ user.email }}</p>
                 </div>
               </div>
-              
+
               <div class="user-metrics-grid">
                 <div class="user-metric-item">
                   <div class="user-metric-icon income-icon">💰</div>
@@ -1234,7 +1185,8 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                   <div class="user-metric-icon profit-icon">📈</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Profit</span>
-                    <span class="user-metric-value profit-value" :class="user.profit >= 0 ? 'income-value' : 'expense-value'">
+                    <span class="user-metric-value profit-value"
+                      :class="user.profit >= 0 ? 'income-value' : 'expense-value'">
                       {{ formatAmount(user.profit) }}
                     </span>
                   </div>
@@ -1276,16 +1228,11 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                   </span>
                 </div>
                 <div class="user-progress-bar-container">
-                  <div
-                    class="user-progress-bar-fill"
+                  <div class="user-progress-bar-fill"
                     :class="{ 'user-progress-overflow': user.progressPercentage > 100 }"
-                    :style="{ width: `${Math.min(user.progressPercentage, 100)}%` }"
-                  ></div>
-                  <div
-                    v-if="user.progressPercentage > 100"
-                    class="user-progress-bar-overflow"
-                    :style="{ width: `${user.progressPercentage - 100}%` }"
-                  ></div>
+                    :style="{ width: `${Math.min(user.progressPercentage, 100)}%` }"></div>
+                  <div v-if="user.progressPercentage > 100" class="user-progress-bar-overflow"
+                    :style="{ width: `${user.progressPercentage - 100}%` }"></div>
                 </div>
               </div>
             </div>
@@ -1644,6 +1591,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1709,11 +1657,25 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   animation-fill-mode: both;
 }
 
-.metric-row:nth-child(1) { animation-delay: 0.1s; }
-.metric-row:nth-child(2) { animation-delay: 0.15s; }
-.metric-row:nth-child(3) { animation-delay: 0.2s; }
-.metric-row:nth-child(4) { animation-delay: 0.25s; }
-.metric-row:nth-child(5) { animation-delay: 0.3s; }
+.metric-row:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.metric-row:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.metric-row:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.metric-row:nth-child(4) {
+  animation-delay: 0.25s;
+}
+
+.metric-row:nth-child(5) {
+  animation-delay: 0.3s;
+}
 
 .metric-row:hover {
   transform: translateX(4px);
@@ -1725,6 +1687,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
     opacity: 0;
     transform: translateX(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -1784,9 +1747,12 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
   }
+
   50% {
     box-shadow: 0 0 0 8px rgba(99, 102, 241, 0);
   }
@@ -1797,6 +1763,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
     opacity: 0;
     transform: scale(0.8);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -1830,6 +1797,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -1867,6 +1835,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
     opacity: 0;
     transform: translateY(-10px) scale(0.8);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -1916,6 +1885,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
@@ -1925,6 +1895,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   0% {
     left: -100%;
   }
+
   100% {
     left: 100%;
   }
@@ -1986,19 +1957,25 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
 }
 
 @keyframes planPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.3);
   }
+
   50% {
     box-shadow: 0 0 0 6px rgba(99, 102, 241, 0);
   }
 }
 
 @keyframes overflowPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
     transform: scaleY(1);
   }
+
   50% {
     opacity: 0.9;
     transform: scaleY(1.05);
@@ -2010,7 +1987,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
     grid-template-columns: 1fr;
     gap: 20px;
   }
-  
+
   .overview-charts-section {
     flex-direction: row;
     flex-wrap: wrap;
@@ -2022,7 +1999,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   .overview-cards {
     grid-template-columns: 1fr;
   }
-  
+
   .overview-charts-section {
     flex-direction: column;
   }
@@ -2128,41 +2105,50 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
 }
 
 @keyframes warningPulse {
-  0%, 100% {
-    box-shadow: var(--shadow-sm), 
-                0 0 0 0 rgba(239, 68, 68, calc(0.3 * var(--warning-intensity, 0.5))),
-                0 0 20px rgba(239, 68, 68, calc(0.1 * var(--warning-intensity, 0.5)));
+
+  0%,
+  100% {
+    box-shadow: var(--shadow-sm),
+      0 0 0 0 rgba(239, 68, 68, calc(0.3 * var(--warning-intensity, 0.5))),
+      0 0 20px rgba(239, 68, 68, calc(0.1 * var(--warning-intensity, 0.5)));
   }
+
   50% {
-    box-shadow: var(--shadow-sm), 
-                0 0 0 8px rgba(239, 68, 68, calc(0.15 * var(--warning-intensity, 0.5))),
-                0 0 30px rgba(239, 68, 68, calc(0.2 * var(--warning-intensity, 0.5)));
+    box-shadow: var(--shadow-sm),
+      0 0 0 8px rgba(239, 68, 68, calc(0.15 * var(--warning-intensity, 0.5))),
+      0 0 30px rgba(239, 68, 68, calc(0.2 * var(--warning-intensity, 0.5)));
   }
 }
 
 @keyframes warningPulseCritical {
-  0%, 100% {
-    box-shadow: var(--shadow-sm), 
-                0 0 0 0 rgba(239, 68, 68, calc(0.5 * var(--warning-intensity, 0.9))),
-                0 0 10px rgba(239, 68, 68, calc(0.2 * var(--warning-intensity, 0.9)));
+
+  0%,
+  100% {
+    box-shadow: var(--shadow-sm),
+      0 0 0 0 rgba(239, 68, 68, calc(0.5 * var(--warning-intensity, 0.7))),
+      0 0 25px rgba(239, 68, 68, calc(0.2 * var(--warning-intensity, 0.7)));
   }
+
   50% {
-    box-shadow: var(--shadow-sm), 
-                0 0 0 10px rgba(239, 68, 68, calc(0.25 * var(--warning-intensity, 0.9))),
-                0 0 20px rgba(239, 68, 68, calc(0.35 * var(--warning-intensity, 0.9)));
+    box-shadow: var(--shadow-sm),
+      0 0 0 10px rgba(239, 68, 68, calc(0.25 * var(--warning-intensity, 0.7))),
+      0 0 40px rgba(239, 68, 68, calc(0.35 * var(--warning-intensity, 0.7)));
   }
 }
 
 @keyframes warningPulseSevere {
-  0%, 100% {
-    box-shadow: var(--shadow-sm), 
-                0 0 0 0 rgba(239, 68, 68, calc(0.7 * var(--warning-intensity, 0.9))),
-                0 0 30px rgba(239, 68, 68, calc(0.3 * var(--warning-intensity, 0.9)));
+
+  0%,
+  100% {
+    box-shadow: var(--shadow-sm),
+      0 0 0 0 rgba(239, 68, 68, calc(0.7 * var(--warning-intensity, 0.9))),
+      0 0 30px rgba(239, 68, 68, calc(0.3 * var(--warning-intensity, 0.9)));
   }
+
   50% {
-    box-shadow: var(--shadow-sm), 
-                0 0 0 12px rgba(239, 68, 68, calc(0.35 * var(--warning-intensity, 0.9))),
-                0 0 50px rgba(239, 68, 68, calc(0.5 * var(--warning-intensity, 0.9)));
+    box-shadow: var(--shadow-sm),
+      0 0 0 12px rgba(239, 68, 68, calc(0.35 * var(--warning-intensity, 0.9))),
+      0 0 50px rgba(239, 68, 68, calc(0.5 * var(--warning-intensity, 0.9)));
   }
 }
 
@@ -2214,9 +2200,12 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
 }
 
 @keyframes badgePulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.05);
   }
@@ -2240,12 +2229,29 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   animation: fadeInScale 0.4s ease-out both;
 }
 
-.week-metric-item:nth-child(1) { animation-delay: 0.1s; }
-.week-metric-item:nth-child(2) { animation-delay: 0.15s; }
-.week-metric-item:nth-child(3) { animation-delay: 0.2s; }
-.week-metric-item:nth-child(4) { animation-delay: 0.25s; }
-.week-metric-item:nth-child(5) { animation-delay: 0.3s; }
-.week-metric-item:nth-child(6) { animation-delay: 0.35s; }
+.week-metric-item:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.week-metric-item:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.week-metric-item:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.week-metric-item:nth-child(4) {
+  animation-delay: 0.25s;
+}
+
+.week-metric-item:nth-child(5) {
+  animation-delay: 0.3s;
+}
+
+.week-metric-item:nth-child(6) {
+  animation-delay: 0.35s;
+}
 
 .week-metric-item:hover {
   transform: translateX(4px);
@@ -2466,15 +2472,18 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   z-index: 0;
 }
 
-.progress-ranking-chart > * {
+.progress-ranking-chart>* {
   position: relative;
   z-index: 1;
 }
 
 @keyframes progressChartGlow {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 4px 20px rgba(16, 185, 129, 0.1);
   }
+
   50% {
     box-shadow: 0 4px 30px rgba(16, 185, 129, 0.2), 0 0 40px rgba(34, 197, 94, 0.15);
   }
@@ -2484,6 +2493,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -2820,9 +2830,12 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
 }
 
 @keyframes progressShimmer {
-  0%, 100% {
+
+  0%,
+  100% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
@@ -2833,6 +2846,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
     opacity: 0;
     transform: translateY(30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2840,9 +2854,12 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
 }
 
 @keyframes badgePulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.05);
   }

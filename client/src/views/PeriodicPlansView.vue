@@ -218,6 +218,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useFinance } from '../composables/useFinance';
 import { useAuthStore } from '../composables/useAuth';
 import { fetchUsers } from '../services/users';
+import { excludeSuperAdmin } from '../utils/userFilters';
 import {
     formatCurrency,
     formatDate,
@@ -470,7 +471,7 @@ const loadData = async () => {
     try {
         const usersRes = await fetchUsers();
         if (usersRes.ok) {
-            allUsers.value = usersRes.data.users || [];
+            allUsers.value = excludeSuperAdmin(usersRes.data.users || []);
         }
 
         const res = await loadPeriods();

@@ -185,6 +185,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useFinance } from '../composables/useFinance';
 import { useAuthStore } from '../composables/useAuth';
 import { fetchUsers } from '../services/users';
+import { excludeSuperAdmin } from '../utils/userFilters';
 import TransactionsTable from '../components/finance/TransactionsTable.vue';
 import TransactionModal from '../components/finance/TransactionModal.vue';
 
@@ -367,7 +368,7 @@ const loadData = async () => {
     if (allUsers.value.length === 0) {
       const usersResponse = await fetchUsers();
       if (usersResponse.ok && usersResponse.data) {
-        allUsers.value = usersResponse.data.users || [];
+        allUsers.value = excludeSuperAdmin(usersResponse.data.users || []);
         
         // Auto-select first user if none selected
         if (!selectedUserId.value && allUsers.value.length > 0) {

@@ -16,7 +16,8 @@ export const ROLES = {
   SUPER_ADMIN: 'SUPER_ADMIN',
   ADMIN: 'ADMIN',
   MEMBER: 'MEMBER',
-  GUEST: 'GUEST'
+  GUEST: 'GUEST',
+  TEAM_BOSS:'ADMIN'
 };
 
 // Legacy role for backward compatibility
