@@ -40,8 +40,8 @@
       </div>
 
       <InterviewBoardTimeGrid v-else-if="currentView === 'time'" :key="timeViewKey" :board-id="boardId"
-        :can-edit="canEditBoard" :users="users" @click-ticket="handleTicketClick" @add-ticket-for-day="openCreateModalForDay"
-        @ticket-moved="handleTimeViewChanged" />
+        :can-edit="canEditBoard" :users="users" @click-ticket="handleTicketClick"
+        @add-ticket-for-day="openCreateModalForDay" @ticket-moved="handleTimeViewChanged" />
       <!-- Company View -->
       <CompanyView v-else-if="currentView === 'company'" :tickets="displayedTickets" :loading="ticketsLoading"
         @click-ticket="handleTicketClick" />
@@ -49,7 +49,7 @@
       <!-- Filter View -->
       <FilterView v-else-if="currentView === 'filter'" :tickets="tickets" :stages="stages" :users="users"
         :loading="ticketsLoading" @click-ticket="handleTicketClick" @filters-change="handleFiltersChange" />
-      
+
       <!-- Settings View -->
       <SettingsView v-else-if="currentView === 'settings'" :board-id="boardId" :stages="stages" :tickets="tickets"
         :can-edit="canEditBoard" @stage-updated="handleStageUpdated" />
@@ -93,15 +93,13 @@
                 <label>Stage *</label>
                 <select v-model="ticketForm.stageId" required class="stage-select">
                   <option value="">Select Stage</option>
-                  <option v-for="stage in stages" :key="stage._id" :value="stage._id" :data-color="stage.color || '#3498db'">
+                  <option v-for="stage in stages" :key="stage._id" :value="stage._id"
+                    :data-color="stage.color || '#3498db'">
                     {{ stage.name }}
                   </option>
                 </select>
                 <div class="stage-select-preview" v-if="ticketForm.stageId">
-                  <span 
-                    class="stage-color-indicator" 
-                    :style="{ backgroundColor: getSelectedStageColor() }"
-                  ></span>
+                  <span class="stage-color-indicator" :style="{ backgroundColor: getSelectedStageColor() }"></span>
                   <span class="stage-name-preview">{{ getSelectedStageName() }}</span>
                 </div>
               </div>
@@ -263,6 +261,7 @@ import { useAuthStore } from '../stores/auth';
 import { normalizeRole, ROLES } from '../constants/roles.js';
 import * as boardService from '../services/interviewBoards';
 import * as userService from '../services/users';
+import { excludeSuperAdmin } from '../utils/userFilters';
 import * as profileService from '../services/jobProfiles';
 import InterviewKanbanColumn from '../components/InterviewBoards/InterviewKanbanColumn.vue';
 import InterviewTicketDrawer from '../components/InterviewBoards/InterviewTicketDrawer.vue';
@@ -501,7 +500,7 @@ const loadUsers = async () => {
   try {
     const response = await userService.fetchUsers();
     if (response.ok && response.data) {
-      users.value = response.data.users || [];
+      users.value = excludeSuperAdmin(response.data.users || []);
     }
   } catch (err) {
     console.error('Failed to load users:', err);
@@ -613,7 +612,7 @@ const handleCreateTicket = async () => {
       : [];
 
     // Get candidate name from selected user if candidateUserId is set
-    const selectedUser = ticketForm.value.candidateUserId 
+    const selectedUser = ticketForm.value.candidateUserId
       ? users.value.find(u => (u._id || u.id) === ticketForm.value.candidateUserId)
       : null;
     const candidateName = selectedUser ? (selectedUser.name || selectedUser.email) : '';

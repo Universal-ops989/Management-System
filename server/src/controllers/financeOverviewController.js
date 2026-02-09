@@ -384,9 +384,9 @@ export const getFinanceMetrics = async (req, res, next) => {
     ====================================================== */
 
     const users = await User.find(
-      isAllMembers ? {} : { _id: userObjectId }
+      isAllMembers ? { role: { $ne: 'SUPER_ADMIN' } } : { _id: userObjectId, role: { $ne: 'SUPER_ADMIN' } }
     )
-      .select('_id name email')
+      .select('_id name email role')
       .lean();
 
     /* ======================================================
@@ -398,6 +398,13 @@ export const getFinanceMetrics = async (req, res, next) => {
     };
     if (!isAllMembers) {
       txQuery.userId = userObjectId;
+    } else {
+      // Exclude transactions from super admin users when fetching all members
+      const superAdminUsers = await User.find({ role: 'SUPER_ADMIN' }).select('_id').lean();
+      const superAdminIds = superAdminUsers.map(u => u._id);
+      if (superAdminIds.length > 0) {
+        txQuery.userId = { $nin: superAdminIds };
+      }
     }
 
     const allTransactions = await FinanceTransaction.find(txQuery).lean();
