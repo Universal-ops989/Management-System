@@ -2,7 +2,7 @@
   <div v-if="hasSelectedProfile" class="drawer-overlay" @click="handleOverlayClick">
     <div class="drawer" @click.stop>
       <ProfileHeader :profile="selectedProfile" @close="handleClose" />
-      
+
       <div class="drawer-content">
         <!-- Edit Mode Toggle -->
         <div class="section-header" v-if="canEdit">
@@ -26,6 +26,12 @@
               <span>{{ selectedProfile.ownerUserId?.name || selectedProfile.ownerUserId?.email || 'N/A' }}</span>
             </div>
             <div class="info-item">
+              <label>Group</label>
+              <span>{{selectedProfile.group.replace(/_/g, ' ')
+                .toLowerCase()
+                .replace(/\b\w/g, c => c.toUpperCase()) }}</span>
+            </div>
+            <div class="info-item">
               <label>Created</label>
               <span>{{ formatDate(selectedProfile.createdAt) }}</span>
             </div>
@@ -33,6 +39,16 @@
 
           <!-- Edit Form -->
           <form v-else @submit.prevent="handleUpdate" class="edit-form">
+            <div class="form-group">
+              <label>Group *</label>
+              <select v-model="editForm.group">
+                <option value="NONE">None</option>
+                <option value="GROUP 1">Group 1</option>
+                <option value="GROUP 2">Group 2</option>
+                <option value="GROUP 3">Group 3</option>
+                <option value="GROUP 4">Group 4</option>
+              </select>
+            </div>
             <div class="form-row">
               <div class="form-group">
                 <label>Name *</label>
@@ -113,35 +129,19 @@
         <!-- Social Links -->
         <div
           v-if="selectedProfile.socialLinks && (selectedProfile.socialLinks.linkedin || selectedProfile.socialLinks.github || selectedProfile.socialLinks.website)"
-          class="section"
-        >
+          class="section">
           <h3>Social Links</h3>
           <div class="social-links">
-            <a
-              v-if="selectedProfile.socialLinks.linkedin"
-              :href="selectedProfile.socialLinks.linkedin"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="social-link"
-            >
+            <a v-if="selectedProfile.socialLinks.linkedin" :href="selectedProfile.socialLinks.linkedin" target="_blank"
+              rel="noopener noreferrer" class="social-link">
               🔗 LinkedIn
             </a>
-            <a
-              v-if="selectedProfile.socialLinks.github"
-              :href="selectedProfile.socialLinks.github"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="social-link"
-            >
+            <a v-if="selectedProfile.socialLinks.github" :href="selectedProfile.socialLinks.github" target="_blank"
+              rel="noopener noreferrer" class="social-link">
               🔗 GitHub
             </a>
-            <a
-              v-if="selectedProfile.socialLinks.website"
-              :href="selectedProfile.socialLinks.website"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="social-link"
-            >
+            <a v-if="selectedProfile.socialLinks.website" :href="selectedProfile.socialLinks.website" target="_blank"
+              rel="noopener noreferrer" class="social-link">
               🔗 Website
             </a>
           </div>
@@ -217,7 +217,7 @@ const canEdit = computed(() => {
 const showSensitiveFields = computed(() => {
   const profile = selectedProfile.value;
   if (!profile || !authStore.user) return false;
-  
+
   const ownerId = profile.ownerUserId?._id || profile.ownerUserId;
   return ownerId === authStore.user._id;
 });
@@ -240,6 +240,7 @@ const displayAddress = computed(() => {
 const editForm = ref({
   name: '',
   status: 'active',
+  group: 'NONE',
   email: '',
   phone: '',
   country: '',
@@ -252,6 +253,7 @@ watch(() => selectedProfile.value, (newProfile) => {
     editForm.value = {
       name: newProfile.name || '',
       status: newProfile.status || 'active',
+      group: newProfile.group || 'NONE',
       email: newProfile.email || '',
       phone: newProfile.phone || '',
       country: newProfile.country || '',
@@ -271,7 +273,7 @@ const formatDate = (date) => {
 const handleUpdate = async () => {
   const profile = selectedProfile.value;
   if (!profile) return;
-  
+
   saving.value = true;
   try {
     await store.dispatch('freelancerProfiles/updateProfile', {
