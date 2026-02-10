@@ -87,6 +87,11 @@ const props = defineProps({
   formatAsPercentage: {
     type: Boolean,
     default: false
+  },
+  /** When true, vertical bars (labels on X, values on Y); when false, horizontal bars */
+  swapAxes: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -143,6 +148,7 @@ const createChart = () => {
   const labels = sortedData.value.map(item => item.label)
   const values = sortedData.value.map(item => item.value)
   const backgroundColors = sortedData.value.map((item, index) => getBarColor(index))
+  const vertical = props.swapAxes
 
   const data = {
     labels,
@@ -159,7 +165,7 @@ const createChart = () => {
   }
 
   const options = {
-    indexAxis: 'y',
+    indexAxis: vertical ? 'x' : 'y',
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -169,9 +175,10 @@ const createChart = () => {
       tooltip: {
         callbacks: {
           label: (context) => {
+            const raw = vertical ? context.parsed.y : context.parsed.x
             const value = props.formatAsPercentage 
-              ? `${context.parsed.x}%`
-              : formatCurrency(context.parsed.x, props.currency)
+              ? `${raw}%`
+              : formatCurrency(raw, props.currency)
             return `${context.label}: ${value}`
           }
         },
@@ -187,34 +194,47 @@ const createChart = () => {
         cornerRadius: 8
       }
     },
-    scales: {
-      x: {
-        beginAtZero: true,
-        ticks: {
-          callback: function(value) {
-            return props.formatAsPercentage 
-              ? `${value}%`
-              : formatCurrency(value, props.currency)
+    scales: vertical
+      ? {
+          x: {
+            ticks: {
+              font: { size: 12 },
+              maxRotation: 45,
+              minRotation: 45
+            },
+            grid: { display: false }
           },
-          font: {
-            size: 11
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return props.formatAsPercentage 
+                  ? `${value}%`
+                  : formatCurrency(value, props.currency)
+              },
+              font: { size: 11 }
+            },
+            grid: { color: '#f3f4f6' }
           }
-        },
-        grid: {
-          color: '#f3f4f6'
         }
-      },
-      y: {
-        ticks: {
-          font: {
-            size: 12
+      : {
+          x: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return props.formatAsPercentage 
+                  ? `${value}%`
+                  : formatCurrency(value, props.currency)
+              },
+              font: { size: 11 }
+            },
+            grid: { color: '#f3f4f6' }
+          },
+          y: {
+            ticks: { font: { size: 12 } },
+            grid: { display: false }
           }
-        },
-        grid: {
-          display: false
         }
-      }
-    }
   }
 
   chartInstance = new Chart(chartCanvas.value, {

@@ -1,8 +1,6 @@
 <template>
   <tr class="table-row-clickable" @click="$emit('view', profile)">
-    <td>{{profile.group.replace(/_/g, ' ')
-      .toLowerCase()
-      .replace(/\b\w/g, c => c.toUpperCase()) || 'None'}}</td>
+    <td>{{ formatGroupLabel(profile.group) }}</td>
     <td>
       <div class="name-cell">
         <div v-if="profile.pictureFileId">
@@ -58,6 +56,7 @@ import {
   canEditFreelancerProfile,
   canDeleteFreelancerProfile
 } from '../../utils/profilePermissions';
+import { formatGroupLabel } from '../../constants/groups.js';
 
 const props = defineProps({
   profile: {

@@ -202,8 +202,6 @@ const isProfileRoute = computed(() => route.path.startsWith('/profiles'));
 const isAssignmentsRoute = computed(() => route.path.startsWith('/assignments'));
 const isFinanceRoute = computed(() => route.path.startsWith('/finance'));
 
-console.log("this is the user degree: ", authStore.user?.group)
-
 watch(
   () => route.path,
   (path) => {

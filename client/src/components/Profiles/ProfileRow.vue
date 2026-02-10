@@ -1,9 +1,7 @@
 <template>
   <tr class="table-row-clickable" @click="$emit('view', profile)">
     <td>
-      <span>{{profile.group.replace(/_/g, ' ')
-        .toLowerCase()
-        .replace(/\b\w/g, c => c.toUpperCase())}}</span>
+      <span>{{ formatGroupLabel(profile.group) }}</span>
     </td>
     <td>
       <div class="name-cell">
@@ -57,6 +55,7 @@
 import { computed } from 'vue';
 import { useAuthStore } from '../../composables/useAuth';
 import { normalizeRole, ROLES } from '../../constants/roles.js';
+import { formatGroupLabel } from '../../constants/groups.js';
 
 const props = defineProps({
   profile: {

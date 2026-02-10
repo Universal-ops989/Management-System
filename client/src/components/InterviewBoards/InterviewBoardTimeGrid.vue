@@ -83,7 +83,7 @@
   </template>
   
   <script setup>
-  import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+  import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
   import InterviewTicketCard from './InterviewTicketCard.vue';
   import TimeTicketCard from './TimeTicketCard.vue';
   import * as boardService from '../../services/interviewBoards';
@@ -92,7 +92,9 @@
   const props = defineProps({
     boardId: { type: String, required: true },
     canEdit: { type: Boolean, default: false },
-    users: { type: Array, default: () => [] }
+    users: { type: Array, default: () => [] },
+    /** When changed, reload time view without scrolling to today (keeps user on current month/date) */
+    refreshKey: { type: [Number, String], default: 0 }
   });
   
   const emit = defineEmits([
@@ -301,60 +303,63 @@
     }
   };
   
-  /* ---------------- Load Time View ---------------- */
-  
-  const loadTimeView = async () => {
-    loading.value = true;
-  
+/* ---------------- Load Time View ---------------- */
+
+  /**
+   * @param {Object} opts
+   * @param {boolean} opts.showLoading - If true, show full-screen loading (replaces days). If false, keep current view and scroll (for refresh after add/move).
+   */
+  const loadTimeView = async (opts = {}) => {
+    const showLoading = opts.showLoading !== false;
+    const isRefresh = !showLoading;
+
+    const savedScrollLeft = scrollContainer.value ? scrollContainer.value.scrollLeft : 0;
+
+    if (showLoading) {
+      loading.value = true;
+    }
+
     const start = startOfMonth(currentDate.value);
     const end = endOfMonth(currentDate.value);
-  
+
     // Request a wider date range to account for timezone differences
-    // EST can be UTC-4 or UTC-5, so we need to request from 1 day before to 1 day after
     const requestStart = new Date(start);
     requestStart.setDate(requestStart.getDate() - 1);
     const requestEnd = new Date(end);
     requestEnd.setDate(requestEnd.getDate() + 1);
-  
+
     const response = await boardService.fetchTicketsTimeView(
       props.boardId,
       toDayKey(requestStart),
       toDayKey(requestEnd)
     );
-  
+
     const rawDays = response.data.days || {};
     const result = [];
-  
-    // Group tickets by EST day - use Set to prevent duplicates
+
     const ticketsByESTDay = {};
     const seenTicketIds = new Set();
-    
+
     Object.keys(rawDays).forEach(utcDayKey => {
       const tickets = rawDays[utcDayKey] || [];
       tickets.forEach(ticket => {
-        // Skip if we've already processed this ticket
         const ticketId = ticket._id || ticket.id;
-        if (seenTicketIds.has(ticketId)) {
-          return;
-        }
+        if (seenTicketIds.has(ticketId)) return;
         seenTicketIds.add(ticketId);
-        
+
         const primaryIndex = ticket.primaryDateIndex || 0;
         const dateObj = ticket.dates?.[primaryIndex];
         if (dateObj && dateObj.scheduledAt) {
-          // Convert UTC to EST to get the correct day
           const est = utcToEST(dateObj.scheduledAt);
           if (est) {
             const estDayKey = est.date;
-            if (!ticketsByESTDay[estDayKey]) {
-              ticketsByESTDay[estDayKey] = [];
-            }
+            if (!ticketsByESTDay[estDayKey]) ticketsByESTDay[estDayKey] = [];
             ticketsByESTDay[estDayKey].push(ticket);
           }
         }
       });
     });
-  
+
     const cursor = new Date(start);
     while (cursor <= end) {
       const key = toDayKey(cursor);
@@ -366,13 +371,14 @@
       });
       cursor.setDate(cursor.getDate() + 1);
     }
-  
+
     days.value = result;
     loading.value = false;
-  
-    // AUTO-FOCUS TODAY
-    await nextTick();
-    scrollToToday();
+
+    if (isRefresh && scrollContainer.value) {
+      await nextTick();
+      scrollContainer.value.scrollLeft = savedScrollLeft;
+    }
   };
   
   /* ---------------- Actions ---------------- */
@@ -394,26 +400,36 @@
     draggedTicket.value = ticket;
   };
   
-  const handleDrop = async (day) => {
+const handleDrop = async (day) => {
     if (!draggedTicket.value) return;
-  
-    // Convert EST 9 AM to UTC for database
-    const utcDate = estToUTC(day, '09:00');
-  
+
+    const ticket = draggedTicket.value;
+    const primaryIndex = ticket.primaryDateIndex ?? 0;
+    const dateObj = ticket.dates?.[primaryIndex];
+
+    // Preserve existing time and duration when moving to another day
+    const existingTime = getTicketTime(ticket);
+    const timeString = existingTime
+      ? `${String(existingTime.hour).padStart(2, '0')}:${String(existingTime.minute).padStart(2, '0')}`
+      : '09:00';
+    const durationMinutes = dateObj?.durationMinutes ?? 60;
+
+    const utcDate = estToUTC(day, timeString);
+
     await boardService.updateInterviewTicket(
       props.boardId,
-      draggedTicket.value._id,
+      ticket._id,
       {
         dates: [{
           scheduledAt: utcDate,
-          durationMinutes: 60
+          durationMinutes
         }]
       }
     );
-  
+
     draggedTicket.value = null;
     emit('ticket-moved');
-    await loadTimeView();
+    await loadTimeView({ showLoading: false });
   };
   
   const handleDeleteTicket = async (ticket) => {
@@ -424,7 +440,7 @@
     try {
       const response = await boardService.deleteInterviewTicket(props.boardId, ticket._id);
       if (response.ok) {
-        await loadTimeView();
+        await loadTimeView({ showLoading: false });
         emit('ticket-moved');
       } else {
         alert(response.message || 'Failed to delete ticket');
@@ -527,8 +543,20 @@
     await loadTimeView();
   };
   
-  onMounted(() => {
-    loadTimeView();
+  const isInitialLoad = ref(true);
+
+  watch(() => props.refreshKey, async () => {
+    if (!props.boardId) return;
+    await loadTimeView({ showLoading: false });
+  });
+
+  onMounted(async () => {
+    await loadTimeView();
+    if (isInitialLoad.value) {
+      isInitialLoad.value = false;
+      await nextTick();
+      scrollToToday();
+    }
   });
 
   onUnmounted(() => {

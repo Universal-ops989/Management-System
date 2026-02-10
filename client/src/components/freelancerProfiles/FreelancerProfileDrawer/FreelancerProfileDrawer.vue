@@ -27,9 +27,7 @@
             </div>
             <div class="info-item">
               <label>Group</label>
-              <span>{{selectedProfile.group.replace(/_/g, ' ')
-                .toLowerCase()
-                .replace(/\b\w/g, c => c.toUpperCase()) }}</span>
+              <span>{{ formatGroupLabel(selectedProfile.group) }}</span>
             </div>
             <div class="info-item">
               <label>Created</label>
@@ -42,11 +40,9 @@
             <div class="form-group">
               <label>Group *</label>
               <select v-model="editForm.group">
-                <option value="NONE">None</option>
-                <option value="GROUP 1">Group 1</option>
-                <option value="GROUP 2">Group 2</option>
-                <option value="GROUP 3">Group 3</option>
-                <option value="GROUP 4">Group 4</option>
+                <option v-for="opt in entityGroupOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
               </select>
             </div>
             <div class="form-row">
@@ -197,9 +193,12 @@ import { ref, computed, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useAuthStore } from '../../../composables/useAuth';
 import { canEditFreelancerProfile } from '../../../utils/profilePermissions';
+import { ENTITY_GROUP_OPTIONS, formatGroupLabel, DEFAULT_ENTITY_GROUP } from '../../../constants/groups.js';
 import ProfileHeader from '../../profiles/ProfileDrawer/ProfileHeader.vue';
 import ProfilePicture from '../../profiles/ProfileDrawer/ProfilePicture.vue';
 import ProfileAttachments from '../../profiles/ProfileDrawer/ProfileAttachments.vue';
+
+const entityGroupOptions = ENTITY_GROUP_OPTIONS;
 
 const store = useStore();
 const authStore = useAuthStore();
@@ -240,7 +239,7 @@ const displayAddress = computed(() => {
 const editForm = ref({
   name: '',
   status: 'active',
-  group: 'NONE',
+  group: DEFAULT_ENTITY_GROUP,
   email: '',
   phone: '',
   country: '',
@@ -253,7 +252,7 @@ watch(() => selectedProfile.value, (newProfile) => {
     editForm.value = {
       name: newProfile.name || '',
       status: newProfile.status || 'active',
-      group: newProfile.group || 'NONE',
+      group: newProfile.group || DEFAULT_ENTITY_GROUP,
       email: newProfile.email || '',
       phone: newProfile.phone || '',
       country: newProfile.country || '',

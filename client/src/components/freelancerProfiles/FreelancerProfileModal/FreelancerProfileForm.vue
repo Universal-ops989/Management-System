@@ -17,11 +17,9 @@
       <div class="form-group">
         <label>Group *</label>
         <select v-model="form.group" required>
-          <option value="NONE">None</option>
-          <option value="GROUP 1">Group 1</option>
-          <option value="GROUP 2">Group 2</option>
-          <option value="GROUP 3">Group 3</option>
-          <option value="GROUP 4">Group 4</option>
+          <option v-for="opt in entityGroupOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </option>
         </select>
       </div>
     </div>
@@ -140,7 +138,10 @@
 import { ref, watch, computed } from 'vue';
 import { useAuthStore } from '../../../composables/useAuth';
 import { normalizeRole, ROLES } from '../../../constants/roles.js';
+import { ENTITY_GROUP_OPTIONS, DEFAULT_ENTITY_GROUP } from '../../../constants/groups.js';
 import FileUploadSection from '../../profiles/ProfileModal/FileUploadSection.vue';
+
+const entityGroupOptions = ENTITY_GROUP_OPTIONS;
 
 const props = defineProps({
   profile: {
@@ -171,7 +172,7 @@ const canEditSensitiveFields = computed(() => {
 const form = ref({
   name: '',
   status: 'active',
-  group: "NONE",
+  group: DEFAULT_ENTITY_GROUP,
   email: '',
   phone: '',
   country: '',
@@ -193,7 +194,7 @@ function resetForm() {
   form.value = {
     name: '',
     status: 'active',
-    group: 'NONE',
+    group: DEFAULT_ENTITY_GROUP,
     email: '',
     phone: '',
     country: '',
@@ -222,7 +223,7 @@ watch(() => props.profile, (newProfile) => {
     form.value = {
       name: newProfile.name || '',
       status: newProfile.status || 'active',
-      group: newProfile.group || 'NONE',
+      group: newProfile.group || DEFAULT_ENTITY_GROUP,
       email: newProfile.email || '',
       phone: newProfile.phone || '',
       country: newProfile.country || '',

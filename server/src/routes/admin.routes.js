@@ -6,6 +6,7 @@ import User from '../models/User.js';
 import { createErrorResponse, createSuccessResponse } from '../utils/errors.js';
 import { log as auditLog, getRequestMeta } from '../utils/audit.js';
 import { hasAdminPrivileges, ROLES, isAdminRole } from '../utils/roleMapper.js';
+import { USER_GROUP_VALUES, DEFAULT_USER_GROUP } from '../constants/groups.js';
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ router.use(requireAuth);
 const createUserSchema = z.object({
   email: z.string().email('Invalid email format'),
   name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name too long'),
-  group: z.enum(['SUPER_ADMIN', 'ADMIN', 'GROUP 1', 'GROUP 2', 'GROUP 3', 'GROUP 4']).optional(),
+  group: z.enum(USER_GROUP_VALUES).optional(),
   degree: z.enum(['SUPER_ADMIN', 'ADMIN', 'TEAM_BOSS', 'MEMBER']).optional(),
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MEMBER', 'GUEST', 'BOSS']).optional(), // BOSS for backward compatibility
   editor: z.boolean().optional(),
@@ -24,7 +25,7 @@ const createUserSchema = z.object({
 });
 
 const updateUserSchema = z.object({
-  group: z.enum(['SUPER_ADMIN', 'ADMIN', 'GROUP 1', 'GROUP 2', 'GROUP 3', 'GROUP 4']).optional(),
+  group: z.enum(USER_GROUP_VALUES).optional(),
   degree: z.enum(['SUPER_ADMIN', 'ADMIN', 'TEAM_BOSS', 'MEMBER']).optional(),
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MEMBER', 'GUEST', 'BOSS']).optional(), // BOSS for backward compatibility
   editor: z.boolean().optional(),
@@ -145,7 +146,7 @@ router.post('/users', async (req, res, next) => {
       email: validatedData.email.toLowerCase(),
       passwordHash,
       name: validatedData.name,
-      group: validatedData.group || 'GROUP 1',
+      group: validatedData.group || DEFAULT_USER_GROUP,
       degree: validatedData.degree || 'MEMBER',
       role: validatedData.role || 'MEMBER',
       editor: validatedData.editor || false,

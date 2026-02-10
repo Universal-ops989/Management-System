@@ -16,16 +16,15 @@
                 <button v-if="isOwner && !isEditing" class="btn-primary" @click="enableEdit">
                     Edit
                 </button>
-                <RouterLink to="/assignments" class="btn-primary" >
-                   <<< Back to 
-                </RouterLink>
-                <button v-if="isEditing" class="btn-save" :disabled="saving" @click="saveChanges">
-                    {{ saving ? 'Saving...' : 'Save' }}
-                </button>
+                <RouterLink to="/assignments" class="btn-primary">
+                    <<< Back to </RouterLink>
+                        <button v-if="isEditing" class="btn-save" :disabled="saving" @click="saveChanges">
+                            {{ saving ? 'Saving...' : 'Save' }}
+                        </button>
 
-                <button v-if="isEditing" class="btn-cancel" @click="cancelEdit">
-                    Cancel
-                </button>
+                        <button v-if="isEditing" class="btn-cancel" @click="cancelEdit">
+                            Cancel
+                        </button>
             </div>
         </div>
 
@@ -43,7 +42,17 @@
         <div v-else-if="assignment" class="content-grid">
             <!-- Main Info -->
             <div class="card">
-                <h3>Details</h3>
+                <div class="subject_group">
+                    <h3>Details</h3>
+                    <select v-if="isEditing" v-model="form.group" class="group-badge">
+                        <option v-for="opt in entityGroupOptions" :key="opt.value" :value="opt.value">
+                          {{ opt.label }}
+                        </option>
+                    </select>
+                    <div v-else class="group-badge">
+                        {{ formatGroupLabel(assignment.group) }}
+                    </div>
+                </div>
 
                 <div class="field">
                     <label>Title</label>
@@ -160,7 +169,9 @@ import {
     getAssignment,
     updateAssignment
 } from '../../services/assignments';
+import { ENTITY_GROUP_OPTIONS, formatGroupLabel } from '../../constants/groups.js';
 
+const entityGroupOptions = ENTITY_GROUP_OPTIONS;
 const route = useRoute();
 const authStore = useAuthStore();
 
@@ -171,9 +182,7 @@ const saving = ref(false);
 const isEditing = ref(false);
 
 const form = ref({});
-
 const isOwner = computed(() => {
-    console.log(assignment.value?.ownerUserId, authStore.user?._id);
     return assignment.value?.ownerUserId === authStore.user?._id;
 });
 
@@ -235,105 +244,106 @@ watch(
 onMounted(loadAssignment);
 </script>
 
-<style scoped>.assignment-detail {
+<style scoped>
+.assignment-detail {
     max-width: 1100px;
     margin: 0 auto;
-  }
-  
-  .page-header {
+}
+
+.page-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 24px;
-  }
-  
-  .title {
+}
+
+.title {
     font-size: 1.6rem;
     font-weight: 600;
-  }
-  
-  .subtitle {
+}
+
+.subtitle {
     color: #7f8c8d;
     margin-top: 4px;
-  }
-  
-  .header-actions {
+}
+
+.header-actions {
     display: flex;
     gap: 10px;
-  }
-  
-  .content-grid {
+}
+
+.content-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
-  }
-  
-  .card {
+}
+
+.card {
     background: #fff;
     padding: 20px;
     border-radius: 8px;
-  }
-  
-  .card.full-width {
+}
+
+.card.full-width {
     grid-column: span 2;
-  }
-  
-  .field {
+}
+
+.field {
     margin-bottom: 14px;
-  }
-  
-  .field label {
+}
+
+.field label {
     font-size: 0.85rem;
     color: #7f8c8d;
     margin-bottom: 4px;
     display: block;
-  }
-  
-  input,
-  textarea,
-  select {
+}
+
+input,
+textarea,
+select {
     width: 100%;
     padding: 8px 10px;
     border-radius: 4px;
     border: 1px solid #ddd;
-  }
-  
-  .status-badge {
+}
+
+.status-badge {
     padding: 4px 10px;
     border-radius: 10px;
     font-size: 0.85rem;
     font-weight: 500;
-  }
-  
-  .status-progressing {
+}
+
+.status-progressing {
     background: #f39c12;
     color: #fff;
-  }
-  
-  .status-completed {
+}
+
+.status-completed {
     background: #2ecc71;
     color: #fff;
-  }
-  
-  .activity-list {
+}
+
+.activity-list {
     list-style: none;
     padding: 0;
-  }
-  
-  .activity-summary {
+}
+
+.activity-summary {
     font-weight: 500;
-  }
-  
-  .activity-time {
+}
+
+.activity-time {
     font-size: 0.8rem;
     color: #7f8c8d;
-  }
-  
-  .muted {
+}
+
+.muted {
     color: #95a5a6;
-  }
-  
-  .btn-primary {
+}
+
+.btn-primary {
     background: #3498db;
     color: white;
     padding: 8px 14px;
@@ -341,18 +351,18 @@ onMounted(loadAssignment);
     border: none;
     cursor: pointer;
     text-decoration: none;
-  }
-  
-  .btn-secondary {
+}
+
+.btn-secondary {
     background: #ecf0f1;
     color: #2c3e50;
     padding: 8px 14px;
     border-radius: 4px;
     cursor: pointer;
     text-decoration: none;
-  }
-  
-  .btn-save {
+}
+
+.btn-save {
     background: #2ecc71;
     color: white;
     padding: 8px 14px;
@@ -360,9 +370,9 @@ onMounted(loadAssignment);
     cursor: pointer;
     text-decoration: none;
     border: none;
-  }
-  
-  .btn-cancel {
+}
+
+.btn-cancel {
     background: #95a5a6;
     color: white;
     cursor: pointer;
@@ -370,6 +380,59 @@ onMounted(loadAssignment);
     padding: 8px 14px;
     border-radius: 4px;
     text-decoration: none;
-  }
-  
+}
+
+.subject_group {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.subject_group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.subject_group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    /* space between Details & badge */
+}
+
+.group-badge {
+    width: auto;
+    /* IMPORTANT */
+    min-width: fit-content;
+    padding: 6px 14px;
+    border-radius: 8px;
+    background: #4f46e5;
+    color: #ffffff;
+    font-weight: 700;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    animation: pulse 2s ease-out infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(14, 1, 255, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 5px rgba(14, 2, 248, 0.3);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.2);
+    }
+}
 </style>

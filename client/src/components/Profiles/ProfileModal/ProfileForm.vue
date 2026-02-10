@@ -16,11 +16,9 @@
       <div class="form-group">
         <label>Group *</label>
         <select v-model="form.group" required>
-          <option value="NONE">None</option>
-          <option value="GROUP 1">Group 1</option>
-          <option value="GROUP 2">Group 2</option>
-          <option value="GROUP 3">Group 3</option>
-          <option value="GROUP 4">Group 4</option>
+          <option v-for="opt in entityGroupOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </option>
         </select>
       </div>
     </div> <!-- Contact Information Section -->
@@ -93,7 +91,10 @@
 import { ref, watch, computed } from 'vue';
 import { useAuthStore } from '../../../stores/auth';
 import { normalizeRole, ROLES } from '../../../constants/roles.js';
+import { ENTITY_GROUP_OPTIONS, DEFAULT_ENTITY_GROUP } from '../../../constants/groups.js';
 import FileUploadSection from './FileUploadSection.vue';
+
+const entityGroupOptions = ENTITY_GROUP_OPTIONS;
 
 /* ---------------- props / emits ---------------- */
 
@@ -144,7 +145,7 @@ const form = ref({
   name: '',
   email: '',
   status: 'active',
-  group: 'NONE',
+  group: DEFAULT_ENTITY_GROUP,
   phone: '',
   country: '',
   address: '',
@@ -170,7 +171,7 @@ function resetForm() {
     name: '',
     email: '',
     status: 'active',
-    group: 'NONE',
+    group: DEFAULT_ENTITY_GROUP,
     phone: '',
     country: '',
     address: '',
@@ -198,7 +199,7 @@ watch(() => props.profile, (newProfile) => {
       name: newProfile.name || '',
       email: newProfile.email || '',
       status: newProfile.status || 'active',
-      group: newProfile.group || 'NONE',
+      group: newProfile.group || DEFAULT_ENTITY_GROUP,
       phone: newProfile.phone || '',
       country: newProfile.country || '',
       address: newProfile.address || '',
