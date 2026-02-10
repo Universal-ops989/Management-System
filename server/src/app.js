@@ -38,12 +38,23 @@ app.use(cors({
   },
   credentials: true
 }));
-// app.use(cors());
-// app.use(
-//   '/uploads',
-//   express.static(path.join(process.cwd(), 'uploads'))
-// );
-// Request logging
+
+// const allowedOrigins = [
+//   "https://management-system-1-kns6.onrender.com",
+//   "http://localhost:5173", // if you use local dev
+// ];
+
+// app.use(cors({
+//   origin: function (origin, callback) {
+//     if (!origin || allowedOrigins.includes(origin)) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error("Not allowed by CORS"));
+//     }
+//   },
+//   credentials: true,
+// }));
+
 app.use(morgan('dev'));
 
 // Body parsing middleware
