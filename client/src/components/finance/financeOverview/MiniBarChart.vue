@@ -40,6 +40,11 @@ const props = defineProps({
       '#6366f1', // indigo
       '#f59e0b'  // amber
     ]
+  },
+  /** When true, vertical bars (labels on X, values on Y) */
+  swapAxes: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -66,6 +71,7 @@ const createChart = () => {
   const labels = props.data.map(item => item.label)
   const values = props.data.map(item => item.value)
   const backgroundColors = props.data.map((item, index) => props.colors[index % props.colors.length])
+  const vertical = props.swapAxes
 
   const data = {
     labels,
@@ -81,7 +87,7 @@ const createChart = () => {
   }
 
   const options = {
-    indexAxis: 'y',
+    indexAxis: vertical ? 'x' : 'y',
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -91,7 +97,8 @@ const createChart = () => {
       tooltip: {
         callbacks: {
           label: (context) => {
-            return `${context.label}: ${formatValue(context.parsed.x)}`
+            const raw = vertical ? context.parsed.y : context.parsed.x
+            return `${context.label}: ${formatValue(raw)}`
           }
         },
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -110,37 +117,53 @@ const createChart = () => {
         easing: 'easeOutQuart'
       }
     },
-    scales: {
-      x: {
-        beginAtZero: true,
-        ticks: {
-          callback: function(value) {
-            if (value >= 1000) {
-              return (value / 1000).toFixed(1) + 'k'
+    scales: vertical
+      ? {
+          x: {
+            ticks: {
+              font: { size: 11 },
+              maxRotation: 45,
+              minRotation: 45
+            },
+            grid: { display: false }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                if (value >= 1000) return (value / 1000).toFixed(1) + 'k'
+                return value
+              },
+              font: { size: 10 },
+              maxTicksLimit: 5
+            },
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)',
+              drawBorder: false
             }
-            return value
-          },
-          font: {
-            size: 10
-          },
-          maxTicksLimit: 5
-        },
-        grid: {
-          color: 'rgba(0, 0, 0, 0.05)',
-          drawBorder: false
-        }
-      },
-      y: {
-        ticks: {
-          font: {
-            size: 11
           }
-        },
-        grid: {
-          display: false
         }
-      }
-    }
+      : {
+          x: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                if (value >= 1000) return (value / 1000).toFixed(1) + 'k'
+                return value
+              },
+              font: { size: 10 },
+              maxTicksLimit: 5
+            },
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)',
+              drawBorder: false
+            }
+          },
+          y: {
+            ticks: { font: { size: 11 } },
+            grid: { display: false }
+          }
+        }
   }
 
   chartInstance = new Chart(chartCanvas.value, {

@@ -39,7 +39,7 @@
         <p>No stages found. The board should have default stages.</p>
       </div>
 
-      <InterviewBoardTimeGrid v-else-if="currentView === 'time'" :key="timeViewKey" :board-id="boardId"
+      <InterviewBoardTimeGrid v-else-if="currentView === 'time'" :refresh-key="timeViewKey" :board-id="boardId"
         :can-edit="canEditBoard" :users="users" @click-ticket="handleTicketClick"
         @add-ticket-for-day="openCreateModalForDay" @ticket-moved="handleTimeViewChanged" />
       <!-- Company View -->

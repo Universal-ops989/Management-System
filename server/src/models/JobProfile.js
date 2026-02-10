@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { ENTITY_GROUP_VALUES } from '../constants/groups.js';
 
 const jobProfileSchema = new mongoose.Schema({
   name: {
@@ -21,7 +22,7 @@ const jobProfileSchema = new mongoose.Schema({
   },
   group: {
     type: String,
-    enum: ['NONE', 'GROUP 1', 'GROUP 2', 'GROUP 3', 'GROUP 4'],
+    enum: ENTITY_GROUP_VALUES,
     required: true,
     index: true
   },

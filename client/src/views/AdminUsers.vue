@@ -44,9 +44,7 @@
           <tr v-for="user in users" :key="user.id">
             <td>{{ user.name }}</td>
             <td>{{ user.email }}</td>
-            <td>{{user.group.replace(/_/g, ' ')
-              .toLowerCase()
-              .replace(/\b\w/g, c => c.toUpperCase())}}</td>
+            <td>{{ formatGroupLabel(user.group) }}</td>
             <td>{{user.degree.replace(/_/g, ' ')
               .toLowerCase()
               .replace(/\b\w/g, c => c.toUpperCase())}}</td>
@@ -104,14 +102,9 @@
               <div class="form-group">
                 <label>Group *</label>
                 <select v-model="form.group" required>
-                  <option value="SUPER_ADMIN">Super Admin</option>
-                  <option value="ADMIN">Admin</option>
-                  <option value="GROUP 1">Group 1</option>
-                  <option value="GROUP 2">Group 2</option>
-                  <option value="GROUP 3">Group 3</option>
-                  <option value="GROUP 4">Group 4</option>
-                  <!-- <option v-if="isSuperAdmin" value="SUPER_ADMIN">Super Admin</option> -->
-                  <!-- Legacy BOSS option removed - will be auto-converted to ADMIN if used -->
+                  <option v-for="opt in userGroupOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
                 </select>
               </div>
               <div class="form-group">
@@ -173,8 +166,10 @@
 import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import * as adminService from '../services/admin';
+import { USER_GROUP_OPTIONS, formatGroupLabel, DEFAULT_USER_GROUP } from '../constants/groups.js';
 
 const authStore = useAuthStore();
+const userGroupOptions = USER_GROUP_OPTIONS;
 
 const loading = ref(false);
 const error = ref(null);
@@ -191,7 +186,7 @@ const isSuperAdmin = computed(() => authStore.user?.role === ROLES.SUPER_ADMIN);
 const form = ref({
   email: '',
   name: '',
-  group: 'GROUP 1',
+  group: DEFAULT_USER_GROUP,
   member: 'MEMBER',
   role: 'MEMBER',
   status: 'active',
@@ -219,7 +214,7 @@ const openCreateModal = () => {
   form.value = {
     email: '',
     name: '',
-    group: 'GROUP 1',
+    group: DEFAULT_USER_GROUP,
     degree: 'MEMBER',
     role: 'MEMBER',
     status: 'active',

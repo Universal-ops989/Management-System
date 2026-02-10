@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
+import { USER_GROUP_VALUES, DEFAULT_USER_GROUP } from '../constants/groups.js';
 
 const userSchema = new mongoose.Schema({
   email: {
@@ -21,7 +22,8 @@ const userSchema = new mongoose.Schema({
   },
   group: {
     type: String,
-    enum: ['SUPER_ADMIN', 'ADMIN', 'GROUP 1', 'GROUP 2', 'GROUP 3', 'GROUP 4'],
+    enum: USER_GROUP_VALUES,
+    default: DEFAULT_USER_GROUP,
     required: true
   },
   degree: {

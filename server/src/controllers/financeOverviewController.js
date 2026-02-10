@@ -386,7 +386,7 @@ export const getFinanceMetrics = async (req, res, next) => {
     const users = await User.find(
       isAllMembers ? { role: { $ne: 'SUPER_ADMIN' } } : { _id: userObjectId, role: { $ne: 'SUPER_ADMIN' } }
     )
-      .select('_id name email role')
+      .select('_id name email role group')
       .lean();
 
     /* ======================================================
@@ -410,7 +410,7 @@ export const getFinanceMetrics = async (req, res, next) => {
     const allTransactions = await FinanceTransaction.find(txQuery).lean();
 
     /* ======================================================
-       GROUP TRANSACTIONS BY USER
+       GROUP_TRANSACTIONS BY USER
     ====================================================== */
 
     const txByUser = {};

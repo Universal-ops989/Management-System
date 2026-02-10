@@ -1,6 +1,7 @@
 import JobProfile from '../models/JobProfile.js';
 import FileMeta from '../models/FileMeta.js';
 import { createErrorResponse, createSuccessResponse } from '../utils/errors.js';
+import { DEFAULT_ENTITY_GROUP, ENTITY_GROUP_VALUES } from '../constants/groups.js';
 import { log as auditLog, getRequestMeta } from '../utils/audit.js';
 import { normalizeRole, ROLES } from '../utils/roleMapper.js';
 import { jobProfilePermissions } from '../utils/permissions/entityPermissions.js';
@@ -23,6 +24,9 @@ const validateJobProfile = (data, isUpdate = false) => {
   }
   if (data.status && !['active', 'archived'].includes(data.status)) {
     errors.push('Status must be active or archived');
+  }
+  if (data.group && !ENTITY_GROUP_VALUES.includes(data.group)) {
+    errors.push(`Group must be one of: ${ENTITY_GROUP_VALUES.join(', ')}`);
   }
   if (data.email && data.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
     errors.push('Invalid email format');
@@ -200,7 +204,7 @@ export const createJobProfile = async (req, res, next) => {
       name: req.body.name,
       ownerUserId: ownerUserId,
       status: req.body.status || 'active',
-      group: req.body.group || 'NONE',
+      group: req.body.group || DEFAULT_ENTITY_GROUP,
       email: req.body.email || '',
       phone: req.body.phone || '',
       country: req.body.country || '',

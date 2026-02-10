@@ -13,6 +13,46 @@ import * as financeService from '../services/finance'
 import { useAuthStore } from '../stores/auth'
 import { fetchUsers } from '../services/users'
 import { excludeSuperAdmin, excludeSuperAdminFromMetrics } from '../utils/userFilters'
+import { formatGroupLabel } from '../constants/groups.js'
+import { ROLES, normalizeRole, isAdminRole } from '../constants/roles.js'
+
+/** Group values used for finance sections (GROUP_1..4 only) */
+const FINANCE_SECTION_GROUPS = ['GROUP_1', 'GROUP_2', 'GROUP_3', 'GROUP_4']
+
+/* ===============================
+   ROLE & SCOPE (Finance by role)
+================================ */
+const isSuperAdmin = computed(() => (authStore.user?.role || '') === ROLES.SUPER_ADMIN)
+const isAdmin = computed(() => isAdminRole(authStore.user?.role) && !isSuperAdmin.value)
+const isMember = computed(() => !isSuperAdmin.value && !isAdmin.value)
+
+const currentUserGroup = computed(() => authStore.user?.group || '')
+const currentUserId = computed(() => authStore.user?._id || authStore.user?.id)
+
+/** For overview API: member sees only own data; admin and super admin use selected member or all */
+const effectiveMemberId = computed(() => {
+  if (isMember.value && currentUserId.value) return currentUserId.value
+  return 'all'
+})
+
+/** For ranking/grouped API: only member gets own data; admin and super need 'all' to split by group */
+const effectiveRankingMemberId = computed(() => {
+  if (isMember.value && currentUserId.value) return currentUserId.value
+  return 'all'
+})
+
+/** Users in scope for dropdown: Super Admin = all; Admin = same group; Member = empty (no dropdown) */
+const usersInScope = computed(() => {
+  const list = users.value || []
+  if (isSuperAdmin.value) return excludeSuperAdmin(list)
+  if (isAdmin.value && currentUserGroup.value) {
+    return list.filter(u => (u.group || '') === currentUserGroup.value)
+  }
+  return []
+})
+
+/** Can current user edit others' finance data (plans)? Admin can edit their group members. */
+const canEditMembersData = computed(() => isAdmin.value || isSuperAdmin.value)
 
 /* ===============================
    STATE
@@ -86,12 +126,13 @@ const loadFinanceOverview = async () => {
   try {
     const { start, end } = getMonthRange(selectedMonth.value)
 
-    // First section (overview) uses selectedMemberId to filter
+    // Overview: member sees only own data; admin/super use selectedMemberId (or 'all')
+    const memberIdForApi = isMember.value ? effectiveMemberId.value : selectedMemberId.value
     const res = await apiClient.get('finance/finance-overview', {
       params: {
         start,
         end,
-        memberId: selectedMemberId.value // Use selected member for overview section
+        memberId: memberIdForApi
       }
     })
 
@@ -170,20 +211,17 @@ const loadFinanceOverview = async () => {
   }
 }
 
-// Load ranking data (always all members - for monthly and yearly ranking sections)
+// Load ranking data: Super Admin/Admin get all; Member gets only own
 const loadRankingData = async () => {
   try {
     const { start, end } = getMonthRange(selectedMonth.value)
-
-    // Ranking sections always show all members' data
     const res = await apiClient.get('finance/finance-overview', {
       params: {
         start,
         end,
-        memberId: 'all' // Always fetch all members for ranking sections
+        memberId: effectiveRankingMemberId.value
       }
     })
-
     rankingMetrics.value = res.data.data.metrics
   } catch (err) {
     console.error('Failed to load ranking data:', err)
@@ -344,7 +382,20 @@ const getProgressRankingData = (metricsData) => {
     .sort((a, b) => b.value - a.value) // Sort descending
 }
 
-// Computed for user summary data (for the table/list)
+// Filter byUser array by group ('all' = no filter)
+const filterByUserGroup = (byUser, group) => {
+  if (!Array.isArray(byUser)) return []
+  if (group === 'all') return byUser
+  return byUser.filter(u => (u.user?.group || '') === group)
+}
+
+// Filter byUser to a single user (for Admin "one graph per person")
+const filterByUserId = (byUser, userId) => {
+  if (!Array.isArray(byUser) || !userId) return []
+  return byUser.filter(u => (u.user?._id || u.user?.id || '') === userId)
+}
+
+// Computed for user summary data (for the table/list); includes group for sectioning
 const getUserSummaryData = (metricsData) => {
   if (!metricsData?.byUser) return []
 
@@ -370,6 +421,7 @@ const getUserSummaryData = (metricsData) => {
         userId: user.user._id || user.user.id,
         name: user.user.name || user.user.email,
         email: user.user.email,
+        group: user.user?.group || 'NONE',
         income,
         outcome,
         profit,
@@ -421,6 +473,28 @@ const yearUserSummaryData = computed(() => getUserSummaryData(rankingYearMetrics
 const yearTargetAchievement = computed(() => getTargetAchievementData(rankingYearMetrics.value))
 const yearPerformanceBreakdown = computed(() => getPerformanceBreakdownData(rankingYearMetrics.value))
 
+// Section-by-group for year
+const yearGroupsWithMembers = computed(() => {
+  const byUser = rankingYearMetrics.value?.byUser
+  if (!byUser?.length) return []
+  const filtered = excludeSuperAdminFromMetrics(byUser)
+  const set = new Set()
+  filtered.forEach(u => {
+    const g = u.user?.group
+    if (g && FINANCE_SECTION_GROUPS.includes(g)) set.add(g)
+  })
+  return FINANCE_SECTION_GROUPS.filter(g => set.has(g))
+})
+
+const yearlySectionKeys = computed(() => [...yearGroupsWithMembers.value, 'all'])
+
+const getYearProgressRankingForSection = (groupKey) =>
+  getProgressRankingData({ byUser: excludeSuperAdminFromMetrics(filterByUserGroup(rankingYearMetrics.value?.byUser, groupKey)) })
+const getYearProfitRankingForSection = (groupKey) =>
+  getProfitRankingData({ byUser: excludeSuperAdminFromMetrics(filterByUserGroup(rankingYearMetrics.value?.byUser, groupKey)) })
+const getYearUserSummaryForSection = (groupKey) =>
+  groupKey === 'all' ? yearUserSummaryData.value : yearUserSummaryData.value.filter(u => (u.group || '') === groupKey)
+
 // Month ranking data (always all members)
 const monthIncomeDistribution = computed(() => getIncomeDistributionData(rankingMonthMetrics.value))
 const monthRankingData = computed(() => getRankingData(rankingMonthMetrics.value))
@@ -429,6 +503,156 @@ const monthProgressRankingData = computed(() => getProgressRankingData(rankingMo
 const monthUserSummaryData = computed(() => getUserSummaryData(rankingMonthMetrics.value))
 const monthTargetAchievement = computed(() => getTargetAchievementData(rankingMonthMetrics.value))
 const monthPerformanceBreakdown = computed(() => getPerformanceBreakdownData(rankingMonthMetrics.value))
+
+// Section-by-group: group keys that have at least one member (month)
+const monthGroupsWithMembers = computed(() => {
+  const byUser = rankingMonthMetrics.value?.byUser
+  if (!byUser?.length) return []
+  const filtered = excludeSuperAdminFromMetrics(byUser)
+  const set = new Set()
+  filtered.forEach(u => {
+    const g = u.user?.group
+    if (g && FINANCE_SECTION_GROUPS.includes(g)) set.add(g)
+  })
+  return FINANCE_SECTION_GROUPS.filter(g => set.has(g))
+})
+
+// Section order: per-group sections first, then "all"
+const monthlySectionKeys = computed(() => [...monthGroupsWithMembers.value, 'all'])
+
+// Month data for a given section (group key or 'all')
+const getMonthProgressRankingForSection = (groupKey) =>
+  getProgressRankingData({ byUser: excludeSuperAdminFromMetrics(filterByUserGroup(rankingMonthMetrics.value?.byUser, groupKey)) })
+const getMonthProfitRankingForSection = (groupKey) =>
+  getProfitRankingData({ byUser: excludeSuperAdminFromMetrics(filterByUserGroup(rankingMonthMetrics.value?.byUser, groupKey)) })
+const getMonthUserSummaryForSection = (groupKey) =>
+  groupKey === 'all' ? monthUserSummaryData.value : monthUserSummaryData.value.filter(u => (u.group || '') === groupKey)
+
+/* ---------------- Role-based section keys ---------------- */
+// Super Admin: always 4 group sections + All
+const superAdminMonthlySectionKeys = computed(() => [...FINANCE_SECTION_GROUPS, 'all'])
+const superAdminYearlySectionKeys = computed(() => [...FINANCE_SECTION_GROUPS, 'all'])
+
+// Admin: one section per group member + Group total (from ranking byUser filtered by group)
+const adminGroupByUser = computed(() => {
+  const byUser = rankingMonthMetrics.value?.byUser || []
+  if (!currentUserGroup.value) return []
+  return excludeSuperAdminFromMetrics(filterByUserGroup(byUser, currentUserGroup.value))
+})
+const adminGroupMemberIds = computed(() => {
+  const list = adminGroupByUser.value
+  const ids = []
+  const seen = new Set()
+  list.forEach(u => {
+    const id = u.user?._id || u.user?.id
+    if (id && !seen.has(id)) { seen.add(id); ids.push(id) }
+  })
+  return ids
+})
+const adminMonthlySectionKeys = computed(() => [...adminGroupMemberIds.value, 'groupTotal'])
+const adminYearlySectionKeys = computed(() => {
+  const byUser = rankingYearMetrics.value?.byUser || []
+  if (!currentUserGroup.value) return []
+  const filtered = excludeSuperAdminFromMetrics(filterByUserGroup(byUser, currentUserGroup.value))
+  const ids = []
+  const seen = new Set()
+  filtered.forEach(u => {
+    const id = u.user?._id || u.user?.id
+    if (id && !seen.has(id)) { seen.add(id); ids.push(id) }
+  })
+  return [...ids, 'groupTotal']
+})
+
+// Getters for Admin: one graph per user (by userId) or group total
+const getMonthProgressRankingForUser = (userId) =>
+  getProgressRankingData({ byUser: userId === 'groupTotal' ? adminGroupByUser.value : filterByUserId(rankingMonthMetrics.value?.byUser, userId) })
+const getMonthProfitRankingForUser = (userId) =>
+  getProfitRankingData({ byUser: userId === 'groupTotal' ? adminGroupByUser.value : filterByUserId(rankingMonthMetrics.value?.byUser, userId) })
+const getMonthUserSummaryForAdminSection = (sectionKey) => {
+  if (sectionKey === 'groupTotal') return getUserSummaryData({ byUser: adminGroupByUser.value })
+  return monthUserSummaryData.value.filter(u => (u.userId || '') === sectionKey)
+}
+const getYearProgressRankingForUser = (userId) =>
+  getProgressRankingData({ byUser: userId === 'groupTotal' ? excludeSuperAdminFromMetrics(filterByUserGroup(rankingYearMetrics.value?.byUser, currentUserGroup.value)) : filterByUserId(rankingYearMetrics.value?.byUser, userId) })
+const getYearProfitRankingForUser = (userId) =>
+  getProfitRankingData({ byUser: userId === 'groupTotal' ? excludeSuperAdminFromMetrics(filterByUserGroup(rankingYearMetrics.value?.byUser, currentUserGroup.value)) : filterByUserId(rankingYearMetrics.value?.byUser, userId) })
+const getYearUserSummaryForAdminSection = (sectionKey) => {
+  if (sectionKey === 'groupTotal') return getUserSummaryData({ byUser: excludeSuperAdminFromMetrics(filterByUserGroup(rankingYearMetrics.value?.byUser, currentUserGroup.value)) })
+  return yearUserSummaryData.value.filter(u => (u.userId || '') === sectionKey)
+}
+
+const getUserDisplayName = (userId) => {
+  if (userId === 'groupTotal') return 'Group Total'
+  const u = adminGroupByUser.value.find(x => (x.user?._id || x.user?.id) === userId)
+  return u?.user?.name || u?.user?.email || 'Member'
+}
+
+// Member: two sections "My Data" and "My Total" (same data)
+const memberMonthlySectionKeys = ['me', 'total']
+const memberYearlySectionKeys = ['me', 'total']
+
+/** Role-based: which section keys to show for monthly ranking */
+const effectiveMonthlySectionKeys = computed(() => {
+  if (isSuperAdmin.value) return superAdminMonthlySectionKeys.value
+  if (isAdmin.value) return adminMonthlySectionKeys.value
+  return memberMonthlySectionKeys
+})
+const effectiveYearlySectionKeys = computed(() => {
+  if (isSuperAdmin.value) return superAdminYearlySectionKeys.value
+  if (isAdmin.value) return adminYearlySectionKeys.value
+  return memberYearlySectionKeys
+})
+
+const effectiveMonthSectionTitle = (key) => {
+  if (isSuperAdmin.value) return key === 'all' ? 'All Members' : formatGroupLabel(key)
+  if (isAdmin.value) return getUserDisplayName(key)
+  return key === 'me' ? 'My Data' : 'My Total'
+}
+const effectiveMonthProgressData = (key) => {
+  if (isSuperAdmin.value) return getMonthProgressRankingForSection(key)
+  if (isAdmin.value) return getMonthProgressRankingForUser(key)
+  return getMonthProgressRankingForSection('all')
+}
+const effectiveMonthProfitData = (key) => {
+  if (isSuperAdmin.value) return getMonthProfitRankingForSection(key)
+  if (isAdmin.value) return getMonthProfitRankingForUser(key)
+  return getMonthProfitRankingForSection('all')
+}
+const effectiveMonthUserSummary = (key) => {
+  if (isSuperAdmin.value) return getMonthUserSummaryForSection(key)
+  if (isAdmin.value) return getMonthUserSummaryForAdminSection(key)
+  return monthUserSummaryData.value
+}
+const effectiveMonthSectionSubtitle = (key) => {
+  if (isSuperAdmin.value) return key === 'all' ? '' : `(${formatGroupLabel(key)})`
+  if (isAdmin.value) return ''
+  return ''
+}
+
+const effectiveYearSectionTitle = (key) => {
+  if (isSuperAdmin.value) return key === 'all' ? 'All Members' : formatGroupLabel(key)
+  if (isAdmin.value) return getUserDisplayName(key)
+  return key === 'me' ? 'My Data' : 'My Total'
+}
+const effectiveYearProgressData = (key) => {
+  if (isSuperAdmin.value) return getYearProgressRankingForSection(key)
+  if (isAdmin.value) return getYearProgressRankingForUser(key)
+  return getYearProgressRankingForSection('all')
+}
+const effectiveYearProfitData = (key) => {
+  if (isSuperAdmin.value) return getYearProfitRankingForSection(key)
+  if (isAdmin.value) return getYearProfitRankingForUser(key)
+  return getYearProfitRankingForSection('all')
+}
+const effectiveYearUserSummary = (key) => {
+  if (isSuperAdmin.value) return getYearUserSummaryForSection(key)
+  if (isAdmin.value) return getYearUserSummaryForAdminSection(key)
+  return yearUserSummaryData.value
+}
+const effectiveYearSectionSubtitle = (key) => {
+  if (isSuperAdmin.value) return key === 'all' ? '' : `(${formatGroupLabel(key)})`
+  return ''
+}
 
 // Selected week data
 const selectedWeekData = computed(() => {
@@ -691,20 +915,22 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
             <span class="filter-label">Month:</span>
             <input type="month" v-model="selectedMonth" class="filter-input" />
           </label>
-          <label class="filter-item">
+          <label v-if="isSuperAdmin || isAdmin" class="filter-item">
             <span class="filter-label">Member:</span>
             <select v-model="selectedMemberId" class="filter-select">
-
-              <!-- <option value="all">All Members</option>/// -->
-              <option value="all">All Users</option>
-              <option v-for="u in users" :key="u.id" :value="u.id">
+              <option value="all">{{ isSuperAdmin ? 'All Users' : 'All (Group)' }}</option>
+              <option v-for="u in usersInScope" :key="u.id || u._id" :value="u.id || u._id">
                 {{ u.name || u.email }}
               </option>
-              <!-- Add user options here if needed -->
             </select>
           </label>
         </div>
       </div>
+      <p v-if="canEditMembersData" class="admin-edit-note">
+        You can edit your group members' plans in
+        <router-link to="/finance/monthly-plans">Monthly Plans</router-link> and
+        <router-link to="/finance/periodic-plans">Periodic Plans</router-link>.
+      </p>
     </div>
 
     <!-- LOADING STATE -->
@@ -796,7 +1022,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 <CircularProgressGauge :percentage="computedMonthMetrics.progressPercentage" label="Progress"
                   :progress-color="computedMonthMetrics.progressPercentage >= 80 ? 'var(--color-success)' : computedMonthMetrics.progressPercentage >= 50 ? 'var(--color-warning)' : 'var(--color-primary)'" />
                 <MiniDoughnutChart title="Income vs Outcome" :data="monthIncomeOutcomeData" />
-                <MiniBarChart title="Comparison" :data="monthComparisonData" />
+                <MiniBarChart title="Comparison" :data="monthComparisonData" :swapAxes="true" />
               </div>
             </div>
           </div>
@@ -865,7 +1091,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 <CircularProgressGauge :percentage="computedWeekMetrics.progressPercentage" label="Progress"
                   :progress-color="computedWeekMetrics.progressPercentage >= 80 ? 'var(--color-success)' : computedWeekMetrics.progressPercentage >= 50 ? 'var(--color-warning)' : 'var(--color-primary)'" />
                 <MiniDoughnutChart title="Income vs Outcome" :data="weekIncomeOutcomeData" />
-                <MiniBarChart title="Comparison" :data="weekComparisonData" />
+                <MiniBarChart title="Comparison" :data="weekComparisonData" :swapAxes="true" />
               </div>
             </div>
           </div>
@@ -983,42 +1209,57 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
         </div>
       </section>
       <!-- MONTH SUMMARY SECTION -->
-      <!-- MONTHLY RANKING SECTION -->
-      <section v-if="rankingMonthMetrics && rankingMonthMetrics.byUser && rankingMonthMetrics.byUser.length > 0"
-        class="dashboard-section">
-        <div class="section-header">
-          <h2 class="section-title">
-            <span class="title-icon">🏆</span>
-            Monthly Member Ranking - {{ formatMonth(selectedMonth) }}
-          </h2>
-        </div>
+      <!-- MONTHLY RANKING SECTIONS: by role (Super Admin = 4 groups + All; Admin = one per member + Group total; Member = My Data + Total) -->
+      <template v-if="rankingMonthMetrics && (rankingMonthMetrics.byUser?.length > 0 || isMember)">
+        <section
+          v-for="sectionKey in effectiveMonthlySectionKeys"
+          :key="'month-' + sectionKey"
+          class="dashboard-section"
+        >
+          <div class="section-header">
+            <h2 class="section-title">
+              <span class="title-icon">🏆</span>
+              {{ effectiveMonthSectionTitle(sectionKey) }} - Monthly Ranking ({{ formatMonth(selectedMonth) }})
+            </h2>
+          </div>
 
-        <!-- Ranking Charts Row -->
-        <div class="ranking-charts-row">
-          <div class="ranking-chart-item progress-ranking-chart">
-            <FinanceRankingChart title="Progress Ranking" subtitle="Ranked by progress percentage"
-              :data="monthProgressRankingData" :formatAsPercentage="true" v-if="monthProgressRankingData.length > 0" />
-            <div v-else class="empty-chart">
-              <p>No progress data available</p>
+          <!-- Ranking Charts Row (swap axes = vertical bars) -->
+          <div class="ranking-charts-row">
+            <div class="ranking-chart-item progress-ranking-chart">
+              <FinanceRankingChart
+                title="Progress Ranking"
+                subtitle="Ranked by progress percentage"
+                :data="effectiveMonthProgressData(sectionKey)"
+                :formatAsPercentage="true"
+                :swapAxes="true"
+                v-if="effectiveMonthProgressData(sectionKey).length > 0"
+              />
+              <div v-else class="empty-chart">
+                <p>No progress data available</p>
+              </div>
+            </div>
+            <div class="ranking-chart-item">
+              <FinanceRankingChart
+                title="Profit Ranking"
+                subtitle="Ranked by profit (Income - Outcome)"
+                :data="effectiveMonthProfitData(sectionKey)"
+                :swapAxes="true"
+                v-if="effectiveMonthProfitData(sectionKey).length > 0"
+              />
+              <div v-else class="empty-chart">
+                <p>No profit data available</p>
+              </div>
             </div>
           </div>
-          <div class="ranking-chart-item">
-            <FinanceRankingChart title="Profit Ranking" subtitle="Ranked by profit (Income - Outcome)"
-              :data="monthProfitRankingData" v-if="monthProfitRankingData.length > 0" />
-            <div v-else class="empty-chart">
-              <p>No profit data available</p>
-            </div>
-          </div>
-        </div>
 
-        <!-- User Summary Table -->
-        <div class="user-summary-section">
-          <h3 class="user-summary-title">
-            <span class="summary-icon">📊</span>
-            Member Summary
-          </h3>
-          <div class="user-summary-grid">
-            <div v-for="(user, index) in monthUserSummaryData" :key="user.userId" class="user-summary-card" :class="{
+          <!-- User Summary for this section -->
+          <div class="user-summary-section">
+            <h3 class="user-summary-title">
+              <span class="summary-icon">📊</span>
+              Member Summary {{ effectiveMonthSectionSubtitle(sectionKey) }}
+            </h3>
+            <div class="user-summary-grid">
+              <div v-for="(user, index) in effectiveMonthUserSummary(sectionKey)" :key="user.userId" class="user-summary-card" :class="{
               'warning-low-progress': user.progressPercentage < 50,
               'warning-critical': user.progressPercentage < 25,
               'warning-severe': user.progressPercentage < 10
@@ -1110,43 +1351,59 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
             </div>
           </div>
         </div>
-      </section>
-      <!-- YEARLY RANKING SECTION -->
-      <section v-if="rankingYearMetrics && rankingYearMetrics.byUser && rankingYearMetrics.byUser.length > 0"
-        class="dashboard-section">
-        <div class="section-header">
-          <h2 class="section-title">
-            <span class="title-icon">🏆</span>
-            Annual Member Ranking - {{ selectedMonth.split('-')[0] }}
-          </h2>
-        </div>
+        </section>
+      </template>
+      <!-- YEARLY RANKING SECTIONS: by role -->
+      <template v-if="rankingYearMetrics && (rankingYearMetrics.byUser?.length > 0 || isMember)">
+        <section
+          v-for="sectionKey in effectiveYearlySectionKeys"
+          :key="'year-' + sectionKey"
+          class="dashboard-section"
+        >
+          <div class="section-header">
+            <h2 class="section-title">
+              <span class="title-icon">🏆</span>
+              {{ effectiveYearSectionTitle(sectionKey) }} - Annual Ranking ({{ selectedMonth.split('-')[0] }})
+            </h2>
+          </div>
 
-        <!-- Ranking Charts Row -->
-        <div class="ranking-charts-row">
-          <div class="ranking-chart-item progress-ranking-chart">
-            <FinanceRankingChart title="Progress Ranking" subtitle="Ranked by progress percentage"
-              :data="yearProgressRankingData" :formatAsPercentage="true" v-if="yearProgressRankingData.length > 0" />
-            <div v-else class="empty-chart">
-              <p>No progress data available</p>
+          <!-- Ranking Charts Row (swap axes = vertical bars) -->
+          <div class="ranking-charts-row">
+            <div class="ranking-chart-item progress-ranking-chart">
+              <FinanceRankingChart
+                title="Progress Ranking"
+                subtitle="Ranked by progress percentage"
+                :data="effectiveYearProgressData(sectionKey)"
+                :formatAsPercentage="true"
+                :swapAxes="true"
+                v-if="effectiveYearProgressData(sectionKey).length > 0"
+              />
+              <div v-else class="empty-chart">
+                <p>No progress data available</p>
+              </div>
+            </div>
+            <div class="ranking-chart-item">
+              <FinanceRankingChart
+                title="Profit Ranking"
+                subtitle="Ranked by profit (Income - Outcome)"
+                :data="effectiveYearProfitData(sectionKey)"
+                :swapAxes="true"
+                v-if="effectiveYearProfitData(sectionKey).length > 0"
+              />
+              <div v-else class="empty-chart">
+                <p>No profit data available</p>
+              </div>
             </div>
           </div>
-          <div class="ranking-chart-item">
-            <FinanceRankingChart title="Profit Ranking" subtitle="Ranked by profit (Income - Outcome)"
-              :data="yearProfitRankingData" v-if="yearProfitRankingData.length > 0" />
-            <div v-else class="empty-chart">
-              <p>No profit data available</p>
-            </div>
-          </div>
-        </div>
 
-        <!-- User Summary Table -->
-        <div class="user-summary-section">
-          <h3 class="user-summary-title">
-            <span class="summary-icon">📊</span>
-            Member Summary (All Months)
-          </h3>
-          <div class="user-summary-grid">
-            <div v-for="(user, index) in yearUserSummaryData" :key="user.userId" class="user-summary-card" :class="{
+          <!-- User Summary for this section -->
+          <div class="user-summary-section">
+            <h3 class="user-summary-title">
+              <span class="summary-icon">📊</span>
+              Member Summary (All Months) {{ effectiveYearSectionSubtitle(sectionKey) }}
+            </h3>
+            <div class="user-summary-grid">
+              <div v-for="(user, index) in effectiveYearUserSummary(sectionKey)" :key="user.userId" class="user-summary-card" :class="{
               'warning-low-progress': user.progressPercentage < 50,
               'warning-critical': user.progressPercentage < 25,
               'warning-severe': user.progressPercentage < 10
@@ -1238,10 +1495,8 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
             </div>
           </div>
         </div>
-      </section>
-
-
-
+        </section>
+      </template>
 
     </div>
   </div>
@@ -1283,6 +1538,21 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
   margin: 0;
+}
+
+.admin-edit-note {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 8px 0 0 0;
+}
+
+.admin-edit-note a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.admin-edit-note a:hover {
+  text-decoration: underline;
 }
 
 .filters {
