@@ -1,6 +1,7 @@
 import FreelancerAccount from '../models/FreelancerAccount.js';
 import FileMeta from '../models/FileMeta.js';
 import { createErrorResponse, createSuccessResponse } from '../utils/errors.js';
+import { DEFAULT_ENTITY_GROUP, ENTITY_GROUP_VALUES } from '../constants/groups.js';
 import { encrypt, decrypt } from '../utils/encryption.js';
 import { log as auditLog, getRequestMeta } from '../utils/audit.js';
 import { normalizeRole, ROLES } from '../utils/roleMapper.js';
@@ -24,6 +25,9 @@ const validateFreelancerAccount = (data, isUpdate = false) => {
   }
   if (data.status && !['active', 'archived'].includes(data.status)) {
     errors.push('Status must be active or archived');
+  }
+  if (data.group && !ENTITY_GROUP_VALUES.includes(data.group)) {
+    errors.push(`Group must be one of: ${ENTITY_GROUP_VALUES.join(', ')}`);
   }
   if (data.email && data.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
     errors.push('Invalid email format');
@@ -136,7 +140,7 @@ export const createFreelancerAccount = async (req, res, next) => {
       name: req.body.name,
       ownerUserId: req.user._id,
       status: req.body.status || 'active',
-      group: req.body.group || 'NONE',
+      group: req.body.group || DEFAULT_ENTITY_GROUP,
       email: req.body.email || '',
       anydeskId: req.body.anydeskId || '',
       accessNotes: req.body.accessNotes || '',

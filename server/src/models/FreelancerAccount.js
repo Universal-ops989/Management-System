@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { ENTITY_GROUP_VALUES, DEFAULT_ENTITY_GROUP } from '../constants/groups.js';
 
 const freelancerAccountSchema = new mongoose.Schema({
   name: {
@@ -21,8 +22,8 @@ const freelancerAccountSchema = new mongoose.Schema({
   },
   group: {
     type: String,
-    enum: ['NONE', 'GROUP 1', 'GROUP 2', 'GROUP 3', 'GROUP 4'],
-    default: 'NONE',
+    enum: ENTITY_GROUP_VALUES,
+    default: DEFAULT_ENTITY_GROUP,
     required: true,
     index: true
   },

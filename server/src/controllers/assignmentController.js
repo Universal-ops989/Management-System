@@ -3,6 +3,7 @@ import Assignment from '../models/Assignment.js';
 import { createErrorResponse, createSuccessResponse } from '../utils/errors.js';
 import { log as auditLog, getRequestMeta } from '../utils/audit.js';
 import { normalizeRole, ROLES } from '../utils/roleMapper.js';
+import { ENTITY_GROUP_VALUES } from '../constants/groups.js';
 
 /* ------------------ Validation Schemas ------------------ */
 
@@ -14,11 +15,13 @@ const createAssignmentSchema = z.object({
     currencyAmount: z.number().optional(),
     currencyCode: z.string().optional(),
     payMethod: z.string().optional(),
-    note: z.string().optional()
+    note: z.string().optional(),
+    group: z.enum(ENTITY_GROUP_VALUES).optional()
 });
 
 const updateAssignmentSchema = createAssignmentSchema.partial().extend({
-    status: z.enum(['progressing', 'completed']).optional()
+    status: z.enum(['progressing', 'completed']).optional(),
+    group: z.enum(ENTITY_GROUP_VALUES).optional()
 });
 
 /* ------------------ Helpers ------------------ */
@@ -129,6 +132,7 @@ export const listAssignments = async (req, res, next) => {
       const {
         search,
         status,
+        group,
         currency,
         payMethod,
         user: userId,
@@ -161,6 +165,7 @@ export const listAssignments = async (req, res, next) => {
   
       // 🎛 filters
       if (status) query.status = status;
+      if (group) query.group = group;
       if (isAdminOrBoss(user)) {
         if (currency) query.currencyCode = currency;
         if (payMethod) query.payMethod = payMethod;
@@ -269,6 +274,7 @@ export const updateAssignment = async (req, res, next) => {
     try {
         const assignment = await Assignment.findById(req.params.id);
 
+        console.log("this is assignment: ", assignment)
         if (!assignment) {
             return res.status(404).json(
                 createErrorResponse('NOT_FOUND', 'Assignment not found', 404)

@@ -27,6 +27,7 @@ export const fetchAssignments = async (filters = {}) => {
   const params = new URLSearchParams();
   if (filters.search) params.append('search', filters.search);
   if (filters.status) params.append('status', filters.status);
+  if (filters.group) params.append('group', filters.group);
   if (filters.from) params.append('from', filters.from);
   if (filters.to) params.append('to', filters.to);
 

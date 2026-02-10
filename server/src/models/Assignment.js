@@ -1,5 +1,6 @@
 // models/Assignment.js
 import mongoose from 'mongoose';
+import { ENTITY_GROUP_VALUES, DEFAULT_ENTITY_GROUP } from '../constants/groups.js';
 
 const activityLogSchema = new mongoose.Schema({
   action: {
@@ -56,6 +57,14 @@ const assignmentSchema = new mongoose.Schema({
     enum: ['progressing', 'completed'],
     default: 'progressing',
     index: true
+  },
+
+  group: {
+    type: String,
+    enum: ENTITY_GROUP_VALUES,
+    default: DEFAULT_ENTITY_GROUP,
+    index: true,
+    required: true
   },
 
   /** Simple collaborator input (NO permissions) */
