@@ -69,9 +69,9 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useAuthStore } from '../composables/useAuth';
 import { normalizeRole, ROLES } from '../constants/roles.js';
-import ProfileTable from '../components/profiles/ProfileTable.vue';
-import ProfileModal from '../components/profiles/ProfileModal/ProfileModal.vue';
-import ProfileDrawer from '../components/profiles/ProfileDrawer/ProfileDrawer.vue';
+import ProfileTable from '../components/Profiles/ProfileTable.vue';
+import ProfileModal from '../components/Profiles/ProfileModal/ProfileModal.vue';
+import ProfileDrawer from '../components/Profiles/ProfileDrawer/ProfileDrawer.vue';
 
 const store = useStore();
 const authStore = useAuthStore();

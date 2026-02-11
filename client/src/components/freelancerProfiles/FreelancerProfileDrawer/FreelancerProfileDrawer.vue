@@ -194,9 +194,9 @@ import { useStore } from 'vuex';
 import { useAuthStore } from '../../../composables/useAuth';
 import { canEditFreelancerProfile } from '../../../utils/profilePermissions';
 import { ENTITY_GROUP_OPTIONS, formatGroupLabel, DEFAULT_ENTITY_GROUP } from '../../../constants/groups.js';
-import ProfileHeader from '../../profiles/ProfileDrawer/ProfileHeader.vue';
-import ProfilePicture from '../../profiles/ProfileDrawer/ProfilePicture.vue';
-import ProfileAttachments from '../../profiles/ProfileDrawer/ProfileAttachments.vue';
+import ProfileHeader from '../../Profiles/ProfileDrawer/ProfileHeader.vue';
+import ProfilePicture from '../../Profiles/ProfileDrawer/ProfilePicture.vue';
+import ProfileAttachments from '../../Profiles/ProfileDrawer/ProfileAttachments.vue';
 
 const entityGroupOptions = ENTITY_GROUP_OPTIONS;
 
