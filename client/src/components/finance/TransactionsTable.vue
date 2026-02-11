@@ -1,6 +1,6 @@
 <template>
   <div class="transactions-table-container">
-    <table class="transactions-table">
+    <table class="table">
       <thead>
         <tr>
           <th>Date</th>

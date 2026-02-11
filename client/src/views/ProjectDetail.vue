@@ -61,7 +61,7 @@
 
       <!-- Tasks Section -->
       <div class="tasks-section">
-        <div class="section-header">
+        <div class="section-header card">
           <h2>Tasks ({{ tasks.length }})</h2>
           <div class="task-filters">
             <select v-model="taskStatusFilter" @change="loadTasks" class="filter-select">
@@ -88,7 +88,7 @@
 
         <!-- Tasks Table -->
         <div v-else class="tasks-table-container">
-          <table class="tasks-table">
+          <table class="table">
             <thead>
               <tr>
                 <th>Title</th>

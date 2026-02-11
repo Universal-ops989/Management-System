@@ -25,29 +25,79 @@
     </div>
 
     <!-- Users Table -->
-    <div v-else class="users-table-container">
-      <table class="users-table">
+    <div v-else>
+        <div class="filters compact-filters inline-controls">
+          <div class="row inline-controls">
+            <div class="form-group col filter-group">
+              <label>Search</label>
+              <input v-model="filters.search" type="text" placeholder="Name or email" />
+            </div>
+            <div class="form-group filter-group">
+              <label>Group</label>
+              <select v-model="filters.group">
+                <option value="">All</option>
+                <option v-for="opt in userGroupOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
+            <div class="form-group filter-group">
+              <label>Role</label>
+              <select v-model="filters.role">
+                <option value="">All</option>
+                <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
+            <div class="form-group filter-group">
+              <label>Access Level</label>
+              <select v-model="filters.degree">
+                <option value="">All</option>
+                <option v-for="opt in degreeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
+            <div class="form-group filter-group">
+              <label>Status</label>
+              <select v-model="filters.status">
+                <option value="">All</option>
+                <option value="active">Active</option>
+                <option value="pending">Pending</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </div>
+            <div class="form-group filter-group filter-compact">
+              <label>Editor</label>
+              <select v-model="filters.editor">
+                <option value="">All</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+      <div class="users-table-container card">
+      <table class="table">
         <thead>
           <tr>
-            <th>User</th>
-            <th>Email</th>
-            <th>Group</th>
-            <th>Degree</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Editor</th>
-            <th>Created</th>
-            <th>Actions</th>
-          </tr>
+              <th>User</th>
+              <th>Email</th>
+              <th>Group</th>
+              <th>Access Level</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Editor</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
         </thead>
         <tbody>
           <tr v-for="user in users" :key="user.id">
             <td>{{ user.name }}</td>
             <td>{{ user.email }}</td>
-            <td>{{ formatGroupLabel(user.group) }}</td>
-            <td>{{user.degree.replace(/_/g, ' ')
-              .toLowerCase()
-              .replace(/\b\w/g, c => c.toUpperCase())}}</td>
+            <td>
+              <span class="badge badge-primary">{{ formatGroupLabel(user.group) }}</span>
+            </td>
+            <td>
+              <span class="badge badge-info">{{ getDegreeDisplayName(user.degree) }}</span>
+            </td>
             <td>
               <span class="role-badge" :class="`role-${user.role.toLowerCase()}`">
                 {{ formatRole(user.role) }}
@@ -71,12 +121,18 @@
             </td>
           </tr>
           <tr v-if="users.length === 0">
-            <td colspan="7" class="empty-state">
+            <td colspan="9" class="empty-state">
               No users found. Click "Add User" to create one.
             </td>
           </tr>
         </tbody>
       </table>
+
+      <div class="table-pagination" v-if="pagination.totalPages > 1">
+        <button :disabled="pagination.page <= 1" @click="loadUsers(pagination.page - 1)">Previous</button>
+        <span>Page {{ pagination.page }} / {{ pagination.totalPages }}</span>
+        <button :disabled="pagination.page >= pagination.totalPages" @click="loadUsers(pagination.page + 1)">Next</button>
+      </div>
     </div>
 
     <!-- Create/Edit Modal -->
@@ -108,13 +164,11 @@
                 </select>
               </div>
               <div class="form-group">
-                <label>Degree *</label>
+                <label>Access Level *</label>
                 <select v-model="form.degree" required>
-                  <option value="SUPER_ADMIN">Super Admin</option>
-                  <option value="ADMIN">Admin</option>
-                  <option value="TEAM_BOSS">Team Boss</option>
-                  <option value="MEMBER">Member</option>
+                  <option v-for="opt in degreeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                 </select>
+                <small class="field-hint">Defines the user's access/membership level.</small>
               </div>
             </div>
             <div class="form-row">
@@ -160,10 +214,11 @@
       </div>
     </div>
   </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import * as adminService from '../services/admin';
 import { USER_GROUP_OPTIONS, formatGroupLabel, DEFAULT_USER_GROUP } from '../constants/groups.js';
@@ -179,7 +234,25 @@ const editingUser = ref(null);
 const saving = ref(false);
 const tempPassword = ref('');
 
-import { ROLES } from '../constants/roles.js';
+import { ROLES, DEGREE_OPTIONS, getDegreeDisplayName, getRoleDisplayName } from '../constants/roles.js';
+
+const degreeOptions = DEGREE_OPTIONS;
+const roleOptions = Object.values(ROLES).map(r => ({ value: r, label: getRoleDisplayName(r) }));
+
+const filters = ref({
+  search: '',
+  group: '',
+  degree: '',
+  role: '',
+  status: '',
+  editor: '',
+  page: 1,
+  limit: 10,
+  sortBy: 'createdAt',
+  sortDir: 'desc'
+});
+
+const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
 
 const isSuperAdmin = computed(() => authStore.user?.role === ROLES.SUPER_ADMIN);
 
@@ -187,19 +260,38 @@ const form = ref({
   email: '',
   name: '',
   group: DEFAULT_USER_GROUP,
-  member: 'MEMBER',
+  degree: 'MEMBER',
   role: 'MEMBER',
   status: 'active',
   editor: false
 });
 
-const loadUsers = async () => {
+const loadUsers = async (pageOverride) => {
   loading.value = true;
   error.value = null;
   try {
-    const response = await adminService.fetchUsers({ limit: 1000 });
+    if (pageOverride !== undefined) filters.value.page = pageOverride;
+    const params = {
+      search: filters.value.search,
+      group: filters.value.group,
+      degree: filters.value.degree,
+      role: filters.value.role,
+      status: filters.value.status,
+      editor: filters.value.editor,
+      page: filters.value.page,
+      limit: filters.value.limit,
+      sortBy: filters.value.sortBy,
+      sortDir: filters.value.sortDir
+    };
+
+    const response = await adminService.fetchUsers(params);
     if (response.ok && response.data) {
       users.value = response.data.users || [];
+      const p = response.data.pagination || {};
+      pagination.value.page = p.page || filters.value.page;
+      pagination.value.limit = p.limit || filters.value.limit;
+      pagination.value.total = p.total || 0;
+      pagination.value.totalPages = p.totalPages || 1;
     }
   } catch (err) {
     error.value = err.response?.data?.message || 'Failed to load users';
@@ -208,6 +300,17 @@ const loadUsers = async () => {
     loading.value = false;
   }
 };
+
+// dynamic filtering: debounce changes to avoid excessive API calls
+let filtersDebounce = null;
+watch(filters, () => {
+  if (filtersDebounce) clearTimeout(filtersDebounce);
+  filtersDebounce = setTimeout(() => {
+    // reset to page 1 on filter changes
+    filters.value.page = 1;
+    loadUsers(1);
+  }, 300);
+}, { deep: true });
 
 const openCreateModal = () => {
   editingUser.value = null;
@@ -301,6 +404,8 @@ const handleResetPassword = async (user) => {
 const formatRole = (role) => {
   return role.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
 };
+
+// degree display handled by getDegreeDisplayName from constants/roles.js
 
 const formatDate = (date) => {
   if (!date) return 'N/A';
@@ -673,6 +778,19 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-md);
+}
+
+/* Inline filters in admin list */
+.filters-panel .inline-filters {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.filters-panel .inline-filters .form-group {
+  min-width: 160px;
 }
 
 .temp-password-alert {

@@ -247,9 +247,7 @@ const loadData = async () => {
 
   try {
     const usersResponse = await fetchUsers();
-    if (usersResponse.ok && usersResponse.data) {
-      allUsers.value = usersResponse.data.users || [];
-    }
+    allUsers.value = usersResponse.users || [];
 
     // Load transactions for the period
     const start = new Date(props.plan.periodId.startDate);

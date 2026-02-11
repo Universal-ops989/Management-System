@@ -10,7 +10,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="filters-section">
+    <div class="filters compact-filters inline-controls">
       <div class="filter-group">
         <label>Date From:</label>
         <input
@@ -92,7 +92,7 @@
     <div v-else class="main-content">
       <!-- Left Section: Users List -->
       <div class="left-section">
-        <div class="section-header">
+        <div class="section-header card">
           <h2>Users</h2>
         </div>
         
@@ -117,7 +117,7 @@
 
       <!-- Right Section: Transactions for Selected User -->
       <div class="right-section">
-        <div class="section-header">
+        <div class="section-header card">
           <h2>
             {{ selectedUser ? `Transactions - ${selectedUser.name || selectedUser.email}` : 'Select a User' }}
           </h2>
@@ -367,16 +367,14 @@ const loadData = async () => {
     // Load users first if not already loaded
     if (allUsers.value.length === 0) {
       const usersResponse = await fetchUsers();
-      if (usersResponse.ok && usersResponse.data) {
-        allUsers.value = excludeSuperAdmin(usersResponse.data.users || []);
-        
-        // Auto-select first user if none selected
-        if (!selectedUserId.value && allUsers.value.length > 0) {
-          const userId = allUsers.value[0]._id || allUsers.value[0].id;
-          selectedUserId.value = userId;
-          selectedUser.value = allUsers.value[0];
-          filters.value.page = 1;
-        }
+      allUsers.value = excludeSuperAdmin(usersResponse.users || []);
+
+      // Auto-select first user if none selected
+      if (!selectedUserId.value && allUsers.value.length > 0) {
+        const userId = allUsers.value[0]._id || allUsers.value[0].id;
+        selectedUserId.value = userId;
+        selectedUser.value = allUsers.value[0];
+        filters.value.page = 1;
       }
     }
 

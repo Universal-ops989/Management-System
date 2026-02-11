@@ -13,19 +13,23 @@
     </div>
 
     <!-- Filters -->
-    <div class="filters-section">
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Search by name, email, phone, country..."
-        class="search-input"
-        @input="handleSearch"
-      />
-      <select v-model="statusFilter" @change="handleFilterChange" class="filter-select">
-        <option value="">All Status</option>
-        <option value="active">Active</option>
-        <option value="archived">Archived</option>
-      </select>
+    <div class="filters compact-filters inline-controls">
+      <div class="filter-group">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search by name, email, phone, country..."
+          class="search-input"
+          @input="handleSearch"
+        />
+      </div>
+      <div class="filter-group">
+        <select v-model="statusFilter" @change="handleFilterChange" class="filter-select">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="archived">Archived</option>
+        </select>
+      </div>
     </div>
 
     <!-- Loading State -->

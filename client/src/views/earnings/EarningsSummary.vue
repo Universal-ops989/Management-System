@@ -10,20 +10,23 @@
       </div>
   
       <!-- Filters -->
-      <div class="filters card">
+      <div class="filters card inline-controls">
         <div class="filter-group">
           <label>From</label>
-          <input type="date" v-model="filters.from" />
+          <input type="date" v-model="filters.from" class="filter-input" />
         </div>
-  
+
         <div class="filter-group">
           <label>To</label>
-          <input type="date" v-model="filters.to" />
+          <input type="date" v-model="filters.to" class="filter-input" />
         </div>
-  
-        <button class="btn-primary" @click="loadSummary">
-          Apply
-        </button>
+
+        <div class="filter-group filter-compact">
+          <label>&nbsp;</label>
+          <button class="btn-primary" @click="loadSummary">
+            Apply
+          </button>
+        </div>
       </div>
   
       <!-- Loading -->
@@ -39,7 +42,7 @@
   
       <!-- Table -->
       <div v-else class="card table-container">
-        <table class="summary-table">
+        <table class="table">
           <thead>
             <tr>
               <th>User</th>

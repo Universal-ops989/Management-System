@@ -97,6 +97,26 @@ export const getRoleDisplayName = (role) => {
 };
 
 /**
+ * Degree options (for user access level) — used in Admin UI selects
+ */
+export const DEGREE_OPTIONS = [
+  { value: 'SUPER_ADMIN', label: 'Super Admin' },
+  { value: 'ADMIN', label: 'Admin' },
+  { value: 'TEAM_BOSS', label: 'Team Boss' },
+  { value: 'MEMBER', label: 'Member' }
+];
+
+/**
+ * Get display name for degree (safe fallback)
+ */
+export const getDegreeDisplayName = (degree) => {
+  if (!degree) return 'N/A';
+  const opt = DEGREE_OPTIONS.find(o => o.value === degree);
+  if (opt) return opt.label;
+  return String(degree).replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+};
+
+/**
  * Check if user has a specific role (with normalization)
  */
 export const hasRole = (user, role) => {

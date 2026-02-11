@@ -56,7 +56,7 @@
           This is intentionally library-agnostic.
           Plug chartData into Chart.js / ECharts / ApexCharts later.
         -->
-        <table v-else class="trend-table">
+        <table v-else class="table">
           <thead>
             <tr>
               <th>Period</th>

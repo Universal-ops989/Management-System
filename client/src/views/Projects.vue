@@ -26,7 +26,7 @@
 
     <!-- Projects Table -->
     <div v-else class="projects-table-container">
-      <table class="projects-table">
+      <table class="table">
         <thead>
           <tr>
             <th>Project Name</th>

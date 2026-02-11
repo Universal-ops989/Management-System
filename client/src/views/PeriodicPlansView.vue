@@ -13,7 +13,7 @@
         </div>
 
         <!-- Filters -->
-        <div class="filters-section">
+            <div class="filters compact-filters inline-controls">
             <div class="filter-group">
                 <label>Month:</label>
                 <input v-model="selectedMonth" type="month" class="filter-input" @change="loadData" />
@@ -45,7 +45,7 @@
         <div v-else class="main-content">
             <!-- Left Section: Periods List -->
             <div class="left-section">
-                <div class="section-header">
+                <div class="section-header card">
                     <h2>Weeks</h2>
                     <button v-if="isBoss" @click="showCreatePeriodModal = true" class="btn-primary btn-small">
                         + Create Week
@@ -88,7 +88,7 @@
 
             <!-- Right Section: Periodic Plans for Selected Period -->
             <div class="right-section">
-                <div class="section-header">
+                <div class="section-header card">
                     <h2>
                         {{ selectedPeriod ? `Plans for ${selectedPeriod.definition}` : 'Select a Week' }}
                     </h2>
@@ -106,7 +106,7 @@
                 </div>
 
                 <div v-else class="plans-list">
-                    <table class="plans-table">
+                    <table class="table">
                         <thead>
                             <tr>
                                 <th>User</th>
@@ -470,9 +470,7 @@ const handlePeriodUpdated = () => {
 const loadData = async () => {
     try {
         const usersRes = await fetchUsers();
-        if (usersRes.ok) {
-            allUsers.value = excludeSuperAdmin(usersRes.data.users || []);
-        }
+        allUsers.value = excludeSuperAdmin(usersRes.users || []);
 
         const res = await loadPeriods();
         periods.value = res.periods || [];

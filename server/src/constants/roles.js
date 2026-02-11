@@ -85,3 +85,23 @@ export const isValidRole = (role) => {
   return Object.values(ALL_ROLES).includes(role);
 };
 
+/**
+ * Degree (access level) options for users.
+ * Keep in sync with client constants/roles.js and server validation.
+ */
+export const DEGREE_OPTIONS = [
+  { value: 'SUPER_ADMIN', label: 'Super Admin' },
+  { value: 'ADMIN', label: 'Admin' },
+  { value: 'TEAM_BOSS', label: 'Team Boss' },
+  { value: 'MEMBER', label: 'Member' }
+];
+
+export const DEGREE_VALUES = DEGREE_OPTIONS.map(o => o.value);
+
+export const getDegreeDisplayName = (degree) => {
+  if (!degree) return 'N/A';
+  const opt = DEGREE_OPTIONS.find(o => o.value === degree);
+  if (opt) return opt.label;
+  return String(degree).replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+};
+

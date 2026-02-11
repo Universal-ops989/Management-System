@@ -26,7 +26,7 @@
 
     <!-- Interviews Table -->
     <div v-else class="interviews-table-container">
-      <table class="interviews-table">
+      <table class="table">
         <thead>
           <tr>
             <th>Job Ticket</th>
@@ -645,11 +645,11 @@ const weekMetrics = computed(() => metrics.value?.week ?? [])
     <div class="header">
       <h1>Finance Overview</h1>
 
-      <div class="filters">
-        <label>
-          Month:
-          <input type="month" v-model="selectedMonth" />
-        </label>
+      <div class="filters inline-controls">
+        <div class="filter-group">
+          <label>Month</label>
+          <input type="month" v-model="selectedMonth" class="filter-input" />
+        </div>
       </div>
     </div>
 
@@ -861,18 +861,15 @@ const selectedWeek = computed(() => {
     <div class="header">
       <h1>Finance Overview</h1>
 
-      <div class="filters">
+      <div class="filters inline-controls">
+        <div class="filter-group">
+          <label>Month</label>
+          <input type="month" v-model="selectedMonth" class="filter-input" />
+        </div>
 
-        <!-- MONTH -->
-        <label>
-          Month:
-          <input type="month" v-model="selectedMonth" />
-        </label>
-
-        <!-- USER -->
-        <label>
-          User:
-          <select v-model="selectedMemberId">
+        <div class="filter-group">
+          <label>User</label>
+          <select v-model="selectedMemberId" class="filter-select">
             <option value="all">All Users</option>
             <option
               v-for="u in users"
@@ -882,12 +879,11 @@ const selectedWeek = computed(() => {
               {{ u.name || u.email }}
             </option>
           </select>
-        </label>
+        </div>
 
-        <!-- PERIOD (WEEK) -->
-        <label v-if="availablePeriods.length">
-          Period:
-          <select v-model="selectedPeriod">
+        <div class="filter-group" v-if="availablePeriods.length">
+          <label>Period</label>
+          <select v-model="selectedPeriod" class="filter-select">
             <option value="all">All Periods</option>
             <option
               v-for="p in availablePeriods"
@@ -897,7 +893,7 @@ const selectedWeek = computed(() => {
               {{ p.period }}
             </option>
           </select>
-        </label>
+        </div>
 
       </div>
     </div>

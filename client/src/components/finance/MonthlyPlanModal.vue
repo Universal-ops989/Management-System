@@ -199,10 +199,8 @@ const save = async () => {
 
 const loadUsers = async () => {
   try {
-    const response = await fetchUsers();
-    if (response?.ok) {
-      users.value = response.data?.users || [];
-    }
+    const res = await fetchUsers();
+    users.value = res.users || [];
   } catch (err) {
     console.error('Error loading users:', err);
   }

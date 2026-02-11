@@ -147,13 +147,12 @@ const typeInput = ref(null);
 const loadUsers = async () => {
   try {
     const res = await fetchUsers();
-    if (res.ok && res.data) {
-      users.value = res.data.users || [];
+    users.value = res.users || [];
 
-      // Default selection only if no selectedUserId prop
-      if (!props.selectedUserId && !form.value.userId && users.value.length > 0) {
-        form.value.userId = users.value[0].id;
-      }
+    // Default selection only if no selectedUserId prop
+    if (!props.selectedUserId && !form.value.userId && users.value.length > 0) {
+      const first = users.value[0];
+      form.value.userId = first.id || first._id || '';
     }
   } catch (err) {
     console.error('Error loading users:', err);

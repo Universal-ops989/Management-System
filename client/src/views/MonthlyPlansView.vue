@@ -10,7 +10,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="filters-section">
+    <div class="filters compact-filters inline-controls">
       <div class="filter-group">
         <label>Year:</label>
         <select v-model="selectedYear" @change="loadData" class="filter-select">
@@ -37,8 +37,8 @@
     <!-- Main Content: Left-Right Layout -->
     <div v-else class="main-content">
       <!-- Left Section: Users List -->
-      <div class="left-section">
-        <div class="section-header">
+      <div class="left-section card">
+        <div class="section-header card">
           <h2>Users</h2>
         </div>
         
@@ -74,8 +74,8 @@
       </div>
 
       <!-- Right Section: Monthly Plans for Selected User -->
-      <div class="right-section">
-        <div class="section-header">
+      <div class="right-section card">
+        <div class="section-header card">
           <h2>
             {{ getSectionTitle() }}
           </h2>
@@ -100,7 +100,7 @@
             class="year-group"
           >
             <h3 class="year-header">{{ yearGroup.year }}</h3>
-            <table class="plans-table">
+            <table class="table">
               <thead>
                 <tr>
                   <th v-if="selectedUserId === 'all'">Month</th>
@@ -461,13 +461,10 @@ const loadData = async () => {
   try {
     // Load users
     const usersResponse = await fetchUsers();
-    if (usersResponse.ok && usersResponse.data) {
-      allUsers.value = excludeSuperAdmin(usersResponse.data.users || []);
-      
-      // Auto-select "All" if none selected
-      if (!selectedUserId.value) {
-        selectAllUsers();
-      }
+    allUsers.value = excludeSuperAdmin(usersResponse.users || []);
+    // Auto-select "All" if none selected
+    if (!selectedUserId.value) {
+      selectAllUsers();
     }
 
     // Load ALL monthly plans initially (without user filter) so counts work for all users
