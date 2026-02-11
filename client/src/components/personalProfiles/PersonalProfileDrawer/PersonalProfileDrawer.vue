@@ -189,7 +189,7 @@ import { ref, computed, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useAuthStore } from '../../../composables/useAuth';
 import { canEditPersonalProfile } from '../../../utils/profilePermissions';
-import ProfileHeader from '../../profiles/ProfileDrawer/ProfileHeader.vue';
+import ProfileHeader from '../../Profiles/ProfileDrawer/ProfileHeader.vue';
 import PersonalProfilePicture from './PersonalProfilePicture.vue';
 import PersonalProfileAttachments from './PersonalProfileAttachments.vue';
 
