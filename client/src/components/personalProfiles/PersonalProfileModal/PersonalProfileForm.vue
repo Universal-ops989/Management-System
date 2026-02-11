@@ -126,7 +126,7 @@
 import { ref, watch, computed } from 'vue';
 import { useAuthStore } from '../../../composables/useAuth';
 import { normalizeRole, ROLES } from '../../../constants/roles.js';
-import FileUploadSection from '../../profiles/ProfileModal/FileUploadSection.vue';
+import FileUploadSection from '../../Profiles/ProfileModal/FileUploadSection.vue';
 
 const props = defineProps({
   profile: {

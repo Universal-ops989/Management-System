@@ -367,6 +367,7 @@ const loadData = async () => {
     // Load users first if not already loaded
     if (allUsers.value.length === 0) {
       const usersResponse = await fetchUsers();
+<<<<<<< HEAD
       allUsers.value = excludeSuperAdmin(usersResponse.users || []);
 
       // Auto-select first user if none selected
@@ -375,6 +376,18 @@ const loadData = async () => {
         selectedUserId.value = userId;
         selectedUser.value = allUsers.value[0];
         filters.value.page = 1;
+=======
+      if (usersResponse.ok && usersResponse.data) {
+        allUsers.value = excludeSuperAdmin(usersResponse.data.users || []);
+        
+        // Auto-select first user if none selected
+        if (!selectedUserId.value && allUsers.value.length > 0) {
+          const userId = allUsers.value[0]._id || allUsers.value[0].id;
+          selectedUserId.value = userId;
+          selectedUser.value = allUsers.value[0];
+          filters.value.page = 1;
+        }
+>>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
       }
     }
 

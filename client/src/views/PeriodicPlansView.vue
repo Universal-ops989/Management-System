@@ -470,7 +470,13 @@ const handlePeriodUpdated = () => {
 const loadData = async () => {
     try {
         const usersRes = await fetchUsers();
+<<<<<<< HEAD
         allUsers.value = excludeSuperAdmin(usersRes.users || []);
+=======
+        if (usersRes.ok) {
+            allUsers.value = excludeSuperAdmin(usersRes.data.users || []);
+        }
+>>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
 
         const res = await loadPeriods();
         periods.value = res.periods || [];

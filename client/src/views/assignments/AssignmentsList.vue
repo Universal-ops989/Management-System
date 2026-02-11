@@ -15,7 +15,11 @@
     </div>
 
     <!-- FILTERS -->
+<<<<<<< HEAD
     <div class="filters card inline-controls">
+=======
+    <div class="filters card">
+>>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
       <div class="filter-group">
         <label>Search</label>
         <input type="text" v-model="filters.search" placeholder="Title or description" @input="onFilterChange" />
@@ -87,7 +91,11 @@
 
     <!-- TABLE -->
     <div v-else class="card table-container">
+<<<<<<< HEAD
       <table class="table">
+=======
+      <table class="assignments-table">
+>>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
         <thead>
           <tr>
             <th>Group</th>
@@ -103,9 +111,13 @@
 
         <tbody>
           <tr v-for="a in assignments" :key="a._id">
+<<<<<<< HEAD
             <td>
               <span class="badge badge-primary">{{ formatGroupLabel(a?.group) }}</span>
             </td>
+=======
+            <td>{{ formatGroupLabel(a?.group) }}</td>
+>>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
             <td v-if="isAdminUser">
               <div class="member-name">
                 {{ a.ownerUserId?.name || '—' }}

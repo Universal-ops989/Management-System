@@ -139,7 +139,13 @@ import { ref, watch, computed } from 'vue';
 import { useAuthStore } from '../../../composables/useAuth';
 import { normalizeRole, ROLES } from '../../../constants/roles.js';
 import { ENTITY_GROUP_OPTIONS, DEFAULT_ENTITY_GROUP } from '../../../constants/groups.js';
+<<<<<<< HEAD
 import FileUploadSection from '../../profiles/ProfileModal/FileUploadSection.vue';
+=======
+import FileUploadSection from '../../Profiles/ProfileModal/FileUploadSection.vue';
+
+const entityGroupOptions = ENTITY_GROUP_OPTIONS;
+>>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
 
 const entityGroupOptions = ENTITY_GROUP_OPTIONS;
 

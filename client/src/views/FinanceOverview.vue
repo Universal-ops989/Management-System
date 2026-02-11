@@ -19,11 +19,14 @@ import { ROLES, normalizeRole, isAdminRole } from '../constants/roles.js'
 /** Group values used for finance sections (GROUP_1..4 only) */
 const FINANCE_SECTION_GROUPS = ['GROUP_1', 'GROUP_2', 'GROUP_3', 'GROUP_4']
 
+<<<<<<< HEAD
 // UI filters for users (finance page)
 const userGroupFilter = ref('all')
 const userNameFilter = ref('')
 let userFilterDebounce = null
 
+=======
+>>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
 /* ===============================
    ROLE & SCOPE (Finance by role)
 ================================ */
@@ -235,6 +238,7 @@ const loadRankingData = async () => {
 /////////////////////////////user
 const loadUsers = async () => {
   try {
+<<<<<<< HEAD
     const params = { limit: 1000 }
     if (userGroupFilter.value && userGroupFilter.value !== 'all') params.group = userGroupFilter.value
     if (userNameFilter.value && userNameFilter.value.trim() !== '') params.search = userNameFilter.value.trim()
@@ -242,6 +246,11 @@ const loadUsers = async () => {
     const res = await fetchUsers(params);
     // Exclude super admin from user list
     users.value = excludeSuperAdmin(res.users || []);
+=======
+    const res = await fetchUsers();
+    // Exclude super admin from user list
+    users.value = excludeSuperAdmin(res.data.users || []);
+>>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
   } catch (err) {
     if (err.response?.status === 403) {
       // Not admin → allowed fallback
@@ -932,6 +941,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
             <span class="filter-label">Month:</span>
             <input type="month" v-model="selectedMonth" class="filter-input" />
           </label>
+<<<<<<< HEAD
           <label class="filter-item filter-group">
             <span class="filter-label">Group:</span>
             <select v-model="userGroupFilter" class="filter-select">
@@ -944,6 +954,9 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
             <input type="text" v-model="userNameFilter" class="filter-input" placeholder="Search name or email" />
           </label>
           <label v-if="isSuperAdmin || isAdmin" class="filter-item filter-group">
+=======
+          <label v-if="isSuperAdmin || isAdmin" class="filter-item">
+>>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
             <span class="filter-label">Member:</span>
             <select v-model="selectedMemberId" class="filter-select">
               <option value="all">{{ isSuperAdmin ? 'All Users' : 'All (Group)' }}</option>
@@ -1127,7 +1140,11 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
       </section>
 
       <!-- WEEKLY BREAKDOWN SECTION -->
+<<<<<<< HEAD
       <section v-if="computedWeekMetricsList && computedWeekMetricsList.length > 0" class="dashboard-section card">
+=======
+      <section v-if="computedWeekMetricsList && computedWeekMetricsList.length > 0" class="dashboard-section">
+>>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
         <div class="section-header">
           <h2 class="section-title">
             <span class="title-icon">📆</span>
@@ -1242,7 +1259,11 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
         <section
           v-for="sectionKey in effectiveMonthlySectionKeys"
           :key="'month-' + sectionKey"
+<<<<<<< HEAD
           class="dashboard-section card"
+=======
+          class="dashboard-section"
+>>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
         >
           <div class="section-header">
             <h2 class="section-title">
@@ -1386,7 +1407,11 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
         <section
           v-for="sectionKey in effectiveYearlySectionKeys"
           :key="'year-' + sectionKey"
+<<<<<<< HEAD
           class="dashboard-section card"
+=======
+          class="dashboard-section"
+>>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
         >
           <div class="section-header">
             <h2 class="section-title">
