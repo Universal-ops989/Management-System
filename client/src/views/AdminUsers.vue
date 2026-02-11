@@ -45,13 +45,20 @@
             <td>{{ user.name }}</td>
             <td>{{ user.email }}</td>
             <td>{{ formatGroupLabel(user.group) }}</td>
-            <td>{{user.degree.replace(/_/g, ' ')
-              .toLowerCase()
-              .replace(/\b\w/g, c => c.toUpperCase())}}</td>
             <td>
-              <span class="role-badge" :class="`role-${user.role.toLowerCase()}`">
-                {{ formatRole(user.role) }}
-              </span>
+              {{
+                user.degree
+                  ? user.degree
+                    .replace(/_/g, ' ')
+                    .toLowerCase()
+                    .replace(/\b\w/g, c => c.toUpperCase())
+              : 'N/A'
+              }}
+            </td>
+            <td>
+            <span class="role-badge" :class="`role-${user.role.toLowerCase()}`">
+              {{ formatRole(user.role) }}
+            </span>
             </td>
             <td>
               <span class="status-badge" :class="`status-${user.status}`">
