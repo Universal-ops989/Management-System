@@ -461,20 +461,10 @@ const loadData = async () => {
   try {
     // Load users
     const usersResponse = await fetchUsers();
-<<<<<<< HEAD
     allUsers.value = excludeSuperAdmin(usersResponse.users || []);
     // Auto-select "All" if none selected
     if (!selectedUserId.value) {
       selectAllUsers();
-=======
-    if (usersResponse.ok && usersResponse.data) {
-      allUsers.value = excludeSuperAdmin(usersResponse.data.users || []);
-      
-      // Auto-select "All" if none selected
-      if (!selectedUserId.value) {
-        selectAllUsers();
-      }
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
     }
 
     // Load ALL monthly plans initially (without user filter) so counts work for all users

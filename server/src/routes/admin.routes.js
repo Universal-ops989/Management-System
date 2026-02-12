@@ -7,11 +7,8 @@ import { createErrorResponse, createSuccessResponse } from '../utils/errors.js';
 import { log as auditLog, getRequestMeta } from '../utils/audit.js';
 import { hasAdminPrivileges, ROLES, isAdminRole } from '../utils/roleMapper.js';
 import { USER_GROUP_VALUES, DEFAULT_USER_GROUP } from '../constants/groups.js';
-<<<<<<< HEAD
 import { DEGREE_VALUES, getDegreeDisplayName } from '../constants/roles.js';
 import buildUserQueryOptions from '../utils/userFilters.js';
-=======
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
 
 const router = express.Router();
 
@@ -23,11 +20,7 @@ const createUserSchema = z.object({
   email: z.string().email('Invalid email format'),
   name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name too long'),
   group: z.enum(USER_GROUP_VALUES).optional(),
-<<<<<<< HEAD
   degree: z.enum(DEGREE_VALUES).optional(),
-=======
-  degree: z.enum(['SUPER_ADMIN', 'ADMIN', 'TEAM_BOSS', 'MEMBER']).optional(),
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MEMBER', 'GUEST', 'BOSS']).optional(), // BOSS for backward compatibility
   editor: z.boolean().optional(),
   status: z.enum(['active', 'disabled', 'pending']).optional()
@@ -35,11 +28,7 @@ const createUserSchema = z.object({
 
 const updateUserSchema = z.object({
   group: z.enum(USER_GROUP_VALUES).optional(),
-<<<<<<< HEAD
   degree: z.enum(DEGREE_VALUES).optional(),
-=======
-  degree: z.enum(['SUPER_ADMIN', 'ADMIN', 'TEAM_BOSS', 'MEMBER']).optional(),
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MEMBER', 'GUEST', 'BOSS']).optional(), // BOSS for backward compatibility
   editor: z.boolean().optional(),
   status: z.enum(['active', 'disabled', 'pending']).optional()
@@ -48,49 +37,7 @@ const updateUserSchema = z.object({
 // Get users with filtering and pagination
 router.get('/users', async (req, res, next) => {
   try {
-<<<<<<< HEAD
     const { query, skip, limit, sort, page } = buildUserQueryOptions(req.query);
-=======
-    const {
-      search = '',
-      group = '',
-      degree = '',
-      role = '',
-      status = '',
-      page = '1',
-      limit = '10'
-    } = req.query;
-
-    const pageNum = parseInt(page, 10) || 1;
-    const limitNum = parseInt(limit, 10) || 10;
-    const skip = (pageNum - 1) * limitNum;
-
-    // Build query
-    const query = {};
-
-    if (search) {
-      query.$or = [
-        { email: { $regex: search, $options: 'i' } },
-        { name: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    if (group) {
-      query.group = group;
-    }
-
-    if (degree) {
-      query.degree = degree;
-    }
-
-    if (role) {
-      query.role = role;
-    }
-
-    if (status) {
-      query.status = status;
-    }
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
 
     // Execute query
     const [users, total] = await Promise.all([
@@ -110,10 +57,7 @@ router.get('/users', async (req, res, next) => {
       name: user.name,
       group: user.group,
       degree: user.degree,
-<<<<<<< HEAD
       degreeLabel: getDegreeDisplayName(user.degree),
-=======
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
       role: user.role,
       editor: user.editor,
       status: user.status,
@@ -184,10 +128,7 @@ router.post('/users', async (req, res, next) => {
         name: user.name,
         group: user.group,
         degree: user.degree,
-<<<<<<< HEAD
         degreeLabel: getDegreeDisplayName(user.degree),
-=======
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
         role: user.role,
         editor: user.editor,
         status: user.status
@@ -301,10 +242,7 @@ router.put('/users/:id', async (req, res, next) => {
       newValues: {
         group: user.group,
         degree: user.degree,
-<<<<<<< HEAD
         degreeLabel: getDegreeDisplayName(user.degree),
-=======
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
         role: user.role,
         status: user.status,
         editor: user.editor
@@ -366,10 +304,7 @@ router.post('/users/:id/reset-password', async (req, res, next) => {
         name: user.name,
         group: user.group,
         degree: user.degree,
-<<<<<<< HEAD
         degreeLabel: getDegreeDisplayName(user.degree),
-=======
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
         role: user.role
       }
     });

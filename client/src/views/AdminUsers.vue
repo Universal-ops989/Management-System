@@ -77,7 +77,6 @@
       <table class="table">
         <thead>
           <tr>
-<<<<<<< HEAD
               <th>User</th>
               <th>Email</th>
               <th>Group</th>
@@ -88,26 +87,12 @@
               <th>Created</th>
               <th>Actions</th>
             </tr>
-=======
-            <th>User</th>
-            <th>Email</th>
-            <th>Group</th>
-            <th>Degree</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Editor</th>
-            <th>Created</th>
-            <th>Actions</th>
-          </tr>
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
         </thead>
         <tbody>
           <tr v-for="user in users" :key="user.id">
             <td>{{ user.name }}</td>
             <td>{{ user.email }}</td>
-            <td>{{ formatGroupLabel(user.group) }}</td>
             <td>
-<<<<<<< HEAD
               <span class="badge badge-primary">{{ formatGroupLabel(user.group) }}</span>
             </td>
             <td>
@@ -117,21 +102,6 @@
               <span class="role-badge" :class="`role-${user.role.toLowerCase()}`">
                 {{ formatRole(user.role) }}
               </span>
-=======
-              {{
-                user.degree
-                  ? user.degree
-                    .replace(/_/g, ' ')
-                    .toLowerCase()
-                    .replace(/\b\w/g, c => c.toUpperCase())
-              : 'N/A'
-              }}
-            </td>
-            <td>
-            <span class="role-badge" :class="`role-${user.role.toLowerCase()}`">
-              {{ formatRole(user.role) }}
-            </span>
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
             </td>
             <td>
               <span class="status-badge" :class="`status-${user.status}`">
@@ -194,21 +164,11 @@
                 </select>
               </div>
               <div class="form-group">
-<<<<<<< HEAD
                 <label>Access Level *</label>
                 <select v-model="form.degree" required>
                   <option v-for="opt in degreeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                 </select>
                 <small class="field-hint">Defines the user's access/membership level.</small>
-=======
-                <label>Degree *</label>
-                <select v-model="form.degree" required>
-                  <option value="SUPER_ADMIN">Super Admin</option>
-                  <option value="ADMIN">Admin</option>
-                  <option value="TEAM_BOSS">Team Boss</option>
-                  <option value="MEMBER">Member</option>
-                </select>
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
               </div>
             </div>
             <div class="form-row">
@@ -300,11 +260,7 @@ const form = ref({
   email: '',
   name: '',
   group: DEFAULT_USER_GROUP,
-<<<<<<< HEAD
   degree: 'MEMBER',
-=======
-  member: 'MEMBER',
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
   role: 'MEMBER',
   status: 'active',
   editor: false

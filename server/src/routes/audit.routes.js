@@ -64,10 +64,7 @@ router.get('/audit-logs', requireAuth, async (req, res, next) => {
         name: log.actorUserId.name,
         group: log.actorUserId.group,
         degree: log.actorUserId.degree,
-<<<<<<< HEAD
         degreeLabel: getDegreeDisplayName(log.actorUserId.degree),
-=======
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
         role: log.actorUserId.role
       } : null,
       action: log.action,

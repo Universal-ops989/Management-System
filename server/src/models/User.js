@@ -1,10 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import { USER_GROUP_VALUES, DEFAULT_USER_GROUP } from '../constants/groups.js';
-<<<<<<< HEAD
 import { DEGREE_VALUES, getDegreeDisplayName } from '../constants/roles.js';
-=======
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
 
 const userSchema = new mongoose.Schema({
   email: {
@@ -32,12 +29,8 @@ const userSchema = new mongoose.Schema({
   },
   degree: {
     type: String,
-<<<<<<< HEAD
     enum: DEGREE_VALUES,
     default: 'MEMBER',
-=======
-    enum: ['SUPER_ADMIN', 'ADMIN', 'TEAM_BOSS', 'MEMBER'],
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
     required: true
   },
   role: {
@@ -93,10 +86,7 @@ userSchema.methods.toSummary = function() {
     name: this.name,
     group: this.group,
     degree: this.degree,
-<<<<<<< HEAD
     degreeLabel: getDegreeDisplayName(this.degree),
-=======
->>>>>>> 44d94dc62b88cfa04a78ec83f187be8dfebe9554
     role: this.role,
     editor: this.editor,
     status: this.status,
