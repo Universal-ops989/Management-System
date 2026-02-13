@@ -133,7 +133,6 @@ const loadUsers = async () => {
     const response = await fetchUsers();
     if (response.ok && response.data) {
       users.value = response.data.users || [];
-      console.log("USERSSSSSSSSSSSSSSSSSSSSSSSSS", users.value);
       if (!formData.value.userId && users.value.length > 0) {
         formData.value.userId = users.value[0]._id;
       }
@@ -180,7 +179,6 @@ watch(() => props.isOpen, async (isOpen) => {
 });
 
 onMounted(() => {
-  console.log("SDGGGGGGGGGG",props)
   loadUsers();
   if (props.isOpen) {
     nextTick(() => {

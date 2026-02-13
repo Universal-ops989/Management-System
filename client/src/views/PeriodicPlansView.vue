@@ -47,7 +47,7 @@
             <div class="left-section">
                 <div class="section-header card">
                     <h2>Weeks</h2>
-                    <button v-if="isBoss" @click="showCreatePeriodModal = true" class="btn-primary btn-small">
+                    <button v-if="isGlobalFinanceAdmin || isTeamBoss" @click="showCreatePeriodModal = true" class="btn-primary btn-small">
                         + Create Week
                     </button>
                 </div>
@@ -93,7 +93,7 @@
                         {{ selectedPeriod ? `Plans for ${selectedPeriod.definition}` : 'Select a Week' }}
                     </h2>
                     <button
-                        v-if="isBoss && selectedPeriod"
+                        v-if="selectedPeriod && canCreateWeeklyPlan"
                         @click="openCreatePlanModal"
                         class="btn-primary btn-small"
                     >
@@ -114,7 +114,7 @@
                                 <th>Actual</th>
                                 <th>Pending</th>
                                 <th>Gap</th>
-                                <th v-if="isBoss">Actions</th>
+                                <th v-if="isGlobalFinanceAdmin || isTeamBoss || isMemberUser">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -140,7 +140,11 @@
                                 }">
                                     {{ formatCurrency(getPeriodGap(plan), currency) }}
                                 </td>
-                                <td v-if="isBoss" class="actions-cell" @click.stop>
+                                <td
+                                  v-if="canManagePlan(plan)"
+                                  class="actions-cell"
+                                  @click.stop
+                                >
                                     <button
                                         class="btn-action btn-edit"
                                         title="Edit"
@@ -224,6 +228,7 @@ import {
     formatDate,
     getCurrentMonth
 } from '../utils/financeHelpers';
+import { ROLES, normalizeRole } from '../constants/roles.js';
 
 import PeriodFinanceDrawer from '../components/finance/PeriodFinanceDrawer.vue';
 import PeriodicPlanModal from '../components/finance/PeriodicPlanModal.vue';
@@ -232,10 +237,45 @@ import EditPeriodModal from '../components/finance/EditPeriodModal.vue';
 
 const authStore = useAuthStore();
 
-const isBoss = computed(() => {
-    const role = authStore.user?.role;
-    return ['SUPER_ADMIN', 'ADMIN', 'BOSS'].includes(role);
-});
+// --------------------------------------------------
+// Finance permissions (weekly plans)
+// --------------------------------------------------
+
+const currentUser = computed(() => authStore.user || {});
+const currentRole = computed(() => normalizeRole(currentUser.value.role));
+const currentDegree = computed(() => currentUser.value.degree || '');
+const currentGroup = computed(() => currentUser.value.group || '');
+const currentUserId = computed(() => currentUser.value._id || currentUser.value.id || '');
+
+const isGlobalFinanceAdmin = computed(() =>
+    currentRole.value === ROLES.SUPER_ADMIN ||
+    (currentRole.value === ROLES.ADMIN && currentDegree.value === 'ADMIN')
+);
+
+const isTeamBoss = computed(() => currentDegree.value === 'TEAM_BOSS');
+
+const isMemberUser = computed(() =>
+    currentRole.value === ROLES.MEMBER || currentRole.value === ROLES.GUEST
+);
+
+const canManageUser = (user) => {
+    if (!user) return false;
+
+    const targetId = user._id || user.id;
+    const targetGroup = user.group || '';
+
+    if (isGlobalFinanceAdmin.value) return true;
+
+    if (isTeamBoss.value) {
+        return !!currentGroup.value && targetGroup === currentGroup.value;
+    }
+
+    if (isMemberUser.value) {
+        return !!currentUserId.value && targetId === currentUserId.value;
+    }
+
+    return false;
+};
 
 const {
     periodicPlans,
@@ -411,6 +451,28 @@ const selectPeriod = (period) => {
     selectedPeriod.value = period;
 };
 
+const canManagePlan = (plan) => {
+    if (!plan) return false;
+    const uid = typeof plan.userId === 'object' ? plan.userId._id || plan.userId.id : plan.userId;
+    const user =
+        allUsers.value.find(u => (u._id || u.id) === uid) ||
+        (typeof plan.userId === 'object' ? plan.userId : null);
+    return canManageUser(user);
+};
+
+// Can the current user create a weekly plan for the currently selected period?
+const canCreateWeeklyPlan = computed(() => {
+    // Global admins and team bosses can always create plans for users they manage
+    if (isGlobalFinanceAdmin.value || isTeamBoss.value) {
+        return true;
+    }
+    // Members can create their own weekly plans
+    if (isMemberUser.value) {
+        return !!currentUserId.value;
+    }
+    return false;
+});
+
 const openCreatePlanModal = () => {
     editingPlan.value = null;
     showPlanModal.value = true;
@@ -470,15 +532,24 @@ const handlePeriodUpdated = () => {
 const loadData = async () => {
     try {
         const usersRes = await fetchUsers();
-        allUsers.value = excludeSuperAdmin(usersRes.users || []);
+        const rawUsers = excludeSuperAdmin(usersRes.users || []);
+        allUsers.value = rawUsers.filter(canManageUser);
 
         const res = await loadPeriods();
-        periods.value = res.periods || [];
+        periods.value = (res.periods || []);
 
         // Load ALL periodic plans initially (without user filter) so counts work for all periods
         const response = await fetchPeriodicPlans({});
         if (response.ok) {
-            periodicPlans.value = response.data?.plans || response.data?.periodicPlans || [];
+            const rawPlans = response.data?.plans || response.data?.periodicPlans || [];
+            // Only keep plans for users current viewer is allowed to manage
+            periodicPlans.value = rawPlans.filter(plan => {
+                const uid = typeof plan.userId === 'object' ? plan.userId._id || plan.userId.id : plan.userId;
+                const user =
+                    allUsers.value.find(u => (u._id || u.id) === uid) ||
+                    (typeof plan.userId === 'object' ? plan.userId : null);
+                return canManageUser(user);
+            });
         } else {
             periodicPlans.value = [];
         }

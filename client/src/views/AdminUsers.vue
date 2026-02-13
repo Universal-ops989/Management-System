@@ -26,194 +26,205 @@
 
     <!-- Users Table -->
     <div v-else>
-        <div class="filters compact-filters inline-controls">
-          <div class="row inline-controls">
-            <div class="form-group col filter-group">
-              <label>Search</label>
-              <input v-model="filters.search" type="text" placeholder="Name or email" />
-            </div>
-            <div class="form-group filter-group">
-              <label>Group</label>
-              <select v-model="filters.group">
-                <option value="">All</option>
-                <option v-for="opt in userGroupOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-              </select>
-            </div>
-            <div class="form-group filter-group">
-              <label>Role</label>
-              <select v-model="filters.role">
-                <option value="">All</option>
-                <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-              </select>
-            </div>
-            <div class="form-group filter-group">
-              <label>Access Level</label>
-              <select v-model="filters.degree">
-                <option value="">All</option>
-                <option v-for="opt in degreeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-              </select>
-            </div>
-            <div class="form-group filter-group">
-              <label>Status</label>
-              <select v-model="filters.status">
-                <option value="">All</option>
-                <option value="active">Active</option>
-                <option value="pending">Pending</option>
-                <option value="disabled">Disabled</option>
-              </select>
-            </div>
-            <div class="form-group filter-group filter-compact">
-              <label>Editor</label>
-              <select v-model="filters.editor">
-                <option value="">All</option>
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-              </select>
-            </div>
+      <div class="filters compact-filters inline-controls">
+        <div class="row inline-controls">
+          <div class="form-group col filter-group">
+            <label>Search</label>
+            <input v-model="filters.search" type="text" placeholder="Name or email" />
+          </div>
+          <div class="form-group filter-group">
+            <label>Group</label>
+            <select v-model="filters.group">
+              <option value="">All</option>
+              <option v-for="opt in userGroupOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+          <div class="form-group filter-group">
+            <label>Level</label>
+            <select v-model="filters.degree">
+              <option value="">All</option>
+              <option v-for="opt in degreeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+          <div class="form-group filter-group">
+            <label>Role</label>
+            <select v-model="filters.role">
+              <option value="">All</option>
+              <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+          <div class="form-group filter-group">
+            <label>Status</label>
+            <select v-model="filters.status">
+              <option value="">All</option>
+              <option value="active">Active</option>
+              <option value="pending">Pending</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </div>
+          <div class="form-group filter-group filter-compact">
+            <label>Editor</label>
+            <select v-model="filters.editor">
+              <option value="">All</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
           </div>
         </div>
+      </div>
 
       <div class="users-table-container card">
-      <table class="table">
-        <thead>
-          <tr>
+        <table class="table">
+          <thead>
+            <tr>
               <th>User</th>
               <th>Email</th>
               <th>Group</th>
-              <th>Access Level</th>
+              <th>Level</th>
               <th>Role</th>
               <th>Status</th>
               <th>Editor</th>
               <th>Created</th>
               <th>Actions</th>
             </tr>
-        </thead>
-        <tbody>
-          <tr v-for="user in users" :key="user.id">
-            <td>{{ user.name }}</td>
-            <td>{{ user.email }}</td>
-            <td>
-              <span class="badge badge-primary">{{ formatGroupLabel(user.group) }}</span>
-            </td>
-            <td>
-              <span class="badge badge-info">{{ getDegreeDisplayName(user.degree) }}</span>
-            </td>
-            <td>
-              <span class="role-badge" :class="`role-${user.role.toLowerCase()}`">
-                {{ formatRole(user.role) }}
-              </span>
-            </td>
-            <td>
-              <span class="status-badge" :class="`status-${user.status}`">
-                {{ user.status }}
-              </span>
-            </td>
-            <td>
-              <span v-if="user.editor" class="badge-yes">Yes</span>
-              <span v-else class="badge-no">No</span>
-            </td>
-            <td>{{ formatDate(user.createdAt) }}</td>
-            <td>
-              <div class="action-buttons">
-                <button @click="openEditModal(user)" class="btn-edit">Edit</button>
-                <button @click="handleResetPassword(user)" class="btn-reset">Reset Password</button>
-              </div>
-            </td>
-          </tr>
-          <tr v-if="users.length === 0">
-            <td colspan="9" class="empty-state">
-              No users found. Click "Add User" to create one.
-            </td>
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            <tr v-for="user in users" :key="user.id">
+              <td>{{ user.name }}</td>
+              <td>{{ user.email }}</td>
+              <td>
+                <span class="badge badge-primary">{{ formatGroupLabel(user.group) }}</span>
+              </td>
+              <td>
+                <span class="badge badge-info">{{ getDegreeDisplayName(user.degree) }}</span>
+              </td>
+              <td>
+                <span class="role-badge" :class="`role-${user.role.toLowerCase()}`">
+                  {{ formatRole(user.role) }}
+                </span>
+              </td>
+              <td>
+                <span class="status-badge" :class="`status-${user.status}`">
+                  {{ user.status }}
+                </span>
+              </td>
+              <td>
+                <span v-if="user.editor" class="badge-yes">Yes</span>
+                <span v-else class="badge-no">No</span>
+              </td>
+              <td>{{ formatDate(user.createdAt) }}</td>
+              <td>
+                <div class="action-buttons">
+                  <button @click="openEditModal(user)" class="btn-edit">Edit</button>
+                  <button @click="handleResetPassword(user)" class="btn-reset">Reset Password</button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="users.length === 0">
+              <td colspan="9" class="empty-state">
+                No users found. Click "Add User" to create one.
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-      <div class="table-pagination" v-if="pagination.totalPages > 1">
-        <button :disabled="pagination.page <= 1" @click="loadUsers(pagination.page - 1)">Previous</button>
-        <span>Page {{ pagination.page }} / {{ pagination.totalPages }}</span>
-        <button :disabled="pagination.page >= pagination.totalPages" @click="loadUsers(pagination.page + 1)">Next</button>
+        <div class="table-pagination" v-if="pagination.totalPages > 1">
+          <button class="pagination-btn" :disabled="pagination.page <= 1" @click="loadUsers(pagination.page - 1)">
+            ← Prev
+          </button>
+
+          <span class="pagination-info">
+            {{ pagination.page }} / {{ pagination.totalPages }}
+          </span>
+
+          <button class="pagination-btn" :disabled="pagination.page >= pagination.totalPages"
+            @click="loadUsers(pagination.page + 1)">
+            Next →
+          </button>
+        </div>
+
+
+      </div>
+
+      <!-- Create/Edit Modal -->
+      <div v-if="showModal" class="modal-overlay" @click="closeModal">
+        <div class="modal" @click.stop>
+          <div class="modal-header">
+            <h2>{{ editingUser ? 'Edit User' : 'Create User' }}</h2>
+            <button @click="closeModal" class="close-btn">✕</button>
+          </div>
+          <div class="modal-content">
+            <form @submit.prevent="handleSubmit">
+              <div class="form-group">
+                <label>Email *</label>
+                <input v-model="form.email" type="email" required :disabled="editingUser !== null"
+                  placeholder="user@example.com" />
+              </div>
+              <div class="form-group">
+                <label>Name *</label>
+                <input v-model="form.name" type="text" required placeholder="Full Name" />
+              </div>
+              <!-- add group and member degree -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Group *</label>
+                  <select v-model="form.group" required>
+                    <option v-for="opt in userGroupOptions" :key="opt.value" :value="opt.value">
+                      {{ opt.label }}
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Access Level *</label>
+                  <select v-model="form.degree" required>
+                    <option v-for="opt in degreeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                  </select>
+                  <small class="field-hint">Defines the user's access/membership level.</small>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Role *</label>
+                  <select v-model="form.role" required>
+                    <option value="MEMBER">Member</option>
+                    <option value="ADMIN">Admin</option>
+                    <option value="GUEST">Guest</option>
+                    <option value="BOSS">Boss</option>
+                    <option v-if="isSuperAdmin" value="SUPER_ADMIN">Super Admin</option>
+                    <!-- Legacy BOSS option removed - will be auto-converted to ADMIN if used -->
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Status *</label>
+                  <select v-model="form.status" required>
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="disabled">Disabled</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>
+                  <input v-model="form.editor" type="checkbox" />
+                  Editor (Can edit profiles and tickets)
+                </label>
+              </div>
+              <div v-if="tempPassword" class="temp-password-alert">
+                <strong>Temporary Password:</strong> {{ tempPassword }}
+                <br />
+                <small>Save this password! The user needs it to log in the first time.</small>
+              </div>
+              <div class="form-actions">
+                <button type="button" @click="closeModal" class="btn-cancel">Cancel</button>
+                <button type="submit" :disabled="saving" class="btn-save">
+                  {{ saving ? 'Saving...' : (editingUser ? 'Update' : 'Create') }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
-
-    <!-- Create/Edit Modal -->
-    <div v-if="showModal" class="modal-overlay" @click="closeModal">
-      <div class="modal" @click.stop>
-        <div class="modal-header">
-          <h2>{{ editingUser ? 'Edit User' : 'Create User' }}</h2>
-          <button @click="closeModal" class="close-btn">✕</button>
-        </div>
-        <div class="modal-content">
-          <form @submit.prevent="handleSubmit">
-            <div class="form-group">
-              <label>Email *</label>
-              <input v-model="form.email" type="email" required :disabled="editingUser !== null"
-                placeholder="user@example.com" />
-            </div>
-            <div class="form-group">
-              <label>Name *</label>
-              <input v-model="form.name" type="text" required placeholder="Full Name" />
-            </div>
-            <!-- add group and member degree -->
-            <div class="form-row">
-              <div class="form-group">
-                <label>Group *</label>
-                <select v-model="form.group" required>
-                  <option v-for="opt in userGroupOptions" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Access Level *</label>
-                <select v-model="form.degree" required>
-                  <option v-for="opt in degreeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                </select>
-                <small class="field-hint">Defines the user's access/membership level.</small>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Role *</label>
-                <select v-model="form.role" required>
-                  <option value="MEMBER">Member</option>
-                  <option value="ADMIN">Admin</option>
-                  <option value="GUEST">Guest</option>
-                  <option value="BOSS">Boss</option>
-                  <option v-if="isSuperAdmin" value="SUPER_ADMIN">Super Admin</option>
-                  <!-- Legacy BOSS option removed - will be auto-converted to ADMIN if used -->
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Status *</label>
-                <select v-model="form.status" required>
-                  <option value="active">Active</option>
-                  <option value="pending">Pending</option>
-                  <option value="disabled">Disabled</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>
-                <input v-model="form.editor" type="checkbox" />
-                Editor (Can edit profiles and tickets)
-              </label>
-            </div>
-            <div v-if="tempPassword" class="temp-password-alert">
-              <strong>Temporary Password:</strong> {{ tempPassword }}
-              <br />
-              <small>Save this password! The user needs it to log in the first time.</small>
-            </div>
-            <div class="form-actions">
-              <button type="button" @click="closeModal" class="btn-cancel">Cancel</button>
-              <button type="submit" :disabled="saving" class="btn-save">
-                {{ saving ? 'Saving...' : (editingUser ? 'Update' : 'Create') }}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
   </div>
 </template>
 
@@ -253,6 +264,8 @@ const filters = ref({
 });
 
 const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
+
+console.log("this is pagination: ", pagination)
 
 const isSuperAdmin = computed(() => authStore.user?.role === ROLES.SUPER_ADMIN);
 
@@ -303,14 +316,27 @@ const loadUsers = async (pageOverride) => {
 
 // dynamic filtering: debounce changes to avoid excessive API calls
 let filtersDebounce = null;
-watch(filters, () => {
-  if (filtersDebounce) clearTimeout(filtersDebounce);
-  filtersDebounce = setTimeout(() => {
-    // reset to page 1 on filter changes
-    filters.value.page = 1;
-    loadUsers(1);
-  }, 300);
-}, { deep: true });
+watch(
+  () => [
+    filters.value.search,
+    filters.value.group,
+    filters.value.degree,
+    filters.value.role,
+    filters.value.status,
+    filters.value.editor,
+    filters.value.sortBy,
+    filters.value.sortDir
+  ],
+  () => {
+    if (filtersDebounce) clearTimeout(filtersDebounce);
+
+    filtersDebounce = setTimeout(() => {
+      filters.value.page = 1;
+      loadUsers(1);
+    }, 300);
+  }
+);
+
 
 const openCreateModal = () => {
   editingUser.value = null;
@@ -418,6 +444,50 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.table-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 0;
+}
+
+.pagination-info {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 70px;
+  text-align: center;
+}
+
+.pagination-btn {
+  padding: 6px 14px;
+  /* smaller */
+  font-size: 13px;
+  /* compact */
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--bg-tertiary);
+}
+
 .admin-users-view {
   background: transparent;
   padding: 0;
