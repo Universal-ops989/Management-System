@@ -13,19 +13,38 @@
     </div>
 
     <!-- Filters -->
-    <div class="filters-section">
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Search by name, email, phone, country..."
-        class="search-input"
-        @input="handleSearch"
-      />
-      <select v-model="statusFilter" @change="handleFilterChange" class="filter-select">
-        <option value="">All Status</option>
-        <option value="active">Active</option>
-        <option value="archived">Archived</option>
-      </select>
+    <div class="filters compact-filters inline-controls">
+      <div class="filter-group">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search by name or email"
+          class="search-input"
+          @input="handleSearch"
+        />
+      </div>
+      <div class="filter-group">
+        <select v-model="groupFilter" @change="handleFilterChange" class="filter-select">
+          <option value="">All Groups</option>
+          <option v-for="g in entityGroupOptions" :key="g.value" :value="g.value">{{ g.label }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <select v-model="statusFilter" @change="handleFilterChange" class="filter-select">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="archived">Archived</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <input
+          v-model="countryFilter"
+          type="text"
+          placeholder="Country"
+          class="search-input"
+          @input="handleSearch"
+        />
+      </div>
     </div>
 
     <!-- Loading State -->
@@ -66,6 +85,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { ENTITY_GROUP_OPTIONS } from '../constants/groups.js';
 import { useStore } from 'vuex';
 import { useAuthStore } from '../composables/useAuth';
 import { canCreateFreelancerProfile } from '../utils/profilePermissions';
@@ -81,6 +101,10 @@ const editingProfile = ref(null);
 const saving = ref(false);
 const searchQuery = ref('');
 const statusFilter = ref('');
+const groupFilter = ref('');
+const countryFilter = ref('');
+
+const entityGroupOptions = ENTITY_GROUP_OPTIONS;
 
 let searchTimeout = null;
 
@@ -96,7 +120,9 @@ const loadProfiles = async () => {
   // Update filters in store
   store.dispatch('freelancerProfiles/setFilters', {
     search: searchQuery.value,
-    status: statusFilter.value
+    status: statusFilter.value,
+    group: groupFilter.value,
+    country: countryFilter.value
   });
   
   // Fetch profiles

@@ -13,19 +13,32 @@
     </div>
 
     <!-- Filters -->
-    <div class="filters-section">
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Search by name, email, phone, country..."
-        class="search-input"
-        @input="handleSearch"
-      />
-      <select v-model="statusFilter" @change="handleFilterChange" class="filter-select">
-        <option value="">All Status</option>
-        <option value="active">Active</option>
-        <option value="archived">Archived</option>
-      </select>
+    <div class="filters compact-filters inline-controls">
+      <div class="filter-group">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search by name"
+          class="search-input"
+          @input="handleSearch"
+        />
+      </div>
+      <div class="filter-group">
+        <select v-model="statusFilter" @change="handleFilterChange" class="filter-select">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="archived">Archived</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <input
+          v-model="countryFilter"
+          type="text"
+          placeholder="Country"
+          class="search-input"
+          @input="handleSearch"
+        />
+      </div>
     </div>
 
     <!-- Loading State -->
@@ -41,14 +54,15 @@
     </div>
 
     <!-- Profiles Table -->
-    <PersonalProfileTable
-      v-else
-      :profiles="profiles"
-      @view="handleView"
-      @edit="handleEdit"
-      @delete="handleDelete"
-      @create="openCreateModal"
-    />
+    <div v-else class="card">
+      <PersonalProfileTable
+        :profiles="profiles"
+        @view="handleView"
+        @edit="handleEdit"
+        @delete="handleDelete"
+        @create="openCreateModal"
+      />
+    </div>
 
     <!-- Create/Edit Modal -->
     <PersonalProfileModal
@@ -81,6 +95,8 @@ const editingProfile = ref(null);
 const saving = ref(false);
 const searchQuery = ref('');
 const statusFilter = ref('');
+const countryFilter = ref('');
+
 
 let searchTimeout = null;
 
@@ -96,7 +112,8 @@ const loadProfiles = async () => {
   // Update filters in store
   store.dispatch('personalProfiles/setFilters', {
     search: searchQuery.value,
-    status: statusFilter.value
+    status: statusFilter.value,
+    country: countryFilter.value
   });
   
   // Fetch profiles

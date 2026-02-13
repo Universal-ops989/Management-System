@@ -1,6 +1,6 @@
 <template>
   <div class="profiles-table-container">
-    <table class="profiles-table">
+    <table class="table">
       <thead>
         <tr>
           <th>Name</th>

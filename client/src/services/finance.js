@@ -242,7 +242,6 @@ export const updatePeriodicPlan = async (id, planData) => {
  * @returns {Promise<ApiResponse>} { ok: true, data: { periods: FinancePeriod[] } }
  */
 export const fetchPeriods = async (filters = {}) => {
-  console.log('Fetching finance periods with filters:', filters);
   const params = new URLSearchParams();
   if (filters.month) params.append('month', filters.month);
 

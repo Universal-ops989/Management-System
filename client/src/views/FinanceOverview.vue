@@ -19,6 +19,11 @@ import { ROLES, normalizeRole, isAdminRole } from '../constants/roles.js'
 /** Group values used for finance sections (GROUP_1..4 only) */
 const FINANCE_SECTION_GROUPS = ['GROUP_1', 'GROUP_2', 'GROUP_3', 'GROUP_4']
 
+// UI filters for users (finance page)
+const userGroupFilter = ref('all')
+const userNameFilter = ref('')
+let userFilterDebounce = null
+
 /* ===============================
    ROLE & SCOPE (Finance by role)
 ================================ */
@@ -230,9 +235,13 @@ const loadRankingData = async () => {
 /////////////////////////////user
 const loadUsers = async () => {
   try {
-    const res = await fetchUsers();
+    const params = { limit: 1000 }
+    if (userGroupFilter.value && userGroupFilter.value !== 'all') params.group = userGroupFilter.value
+    if (userNameFilter.value && userNameFilter.value.trim() !== '') params.search = userNameFilter.value.trim()
+
+    const res = await fetchUsers(params);
     // Exclude super admin from user list
-    users.value = excludeSuperAdmin(res.data.users || []);
+    users.value = excludeSuperAdmin(res.users || []);
   } catch (err) {
     if (err.response?.status === 403) {
       // Not admin → allowed fallback
@@ -250,6 +259,14 @@ onMounted(() => {
   loadUsers()
   loadFinanceOverview()
   loadRankingData()
+})
+
+// debounce user filters to auto-refresh users list
+watch([userGroupFilter, userNameFilter], () => {
+  if (userFilterDebounce) clearTimeout(userFilterDebounce)
+  userFilterDebounce = setTimeout(() => {
+    loadUsers()
+  }, 300)
 })
 
 // Watch selectedMonth and selectedMemberId for overview section (first section)
@@ -910,12 +927,23 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
           <h1>Finance Overview</h1>
           <p class="subtitle">{{ formatMonth(selectedMonth) }}</p>
         </div>
-        <div class="filters">
-          <label class="filter-item">
+        <div class="filters compact-filters inline-controls">
+          <label class="filter-item filter-group">
             <span class="filter-label">Month:</span>
             <input type="month" v-model="selectedMonth" class="filter-input" />
           </label>
-          <label v-if="isSuperAdmin || isAdmin" class="filter-item">
+          <label class="filter-item filter-group">
+            <span class="filter-label">Group:</span>
+            <select v-model="userGroupFilter" class="filter-select">
+              <option value="all">All</option>
+              <option v-for="g in FINANCE_SECTION_GROUPS" :key="g" :value="g">{{ formatGroupLabel(g) }}</option>
+            </select>
+          </label>
+          <label class="filter-item filter-group">
+            <span class="filter-label">Name:</span>
+            <input type="text" v-model="userNameFilter" class="filter-input" placeholder="Search name or email" />
+          </label>
+          <label v-if="isSuperAdmin || isAdmin" class="filter-item filter-group">
             <span class="filter-label">Member:</span>
             <select v-model="selectedMemberId" class="filter-select">
               <option value="all">{{ isSuperAdmin ? 'All Users' : 'All (Group)' }}</option>
@@ -950,7 +978,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
     <!-- CONTENT -->
     <div v-if="!loading && !error && metrics" class="content">
       <!-- Finance Overview Section -->
-      <section class="dashboard-section">
+      <section class="dashboard-section card">
         <div class="section-header">
           <h2 class="section-title">
             <span class="title-icon">📊</span>
@@ -1099,7 +1127,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
       </section>
 
       <!-- WEEKLY BREAKDOWN SECTION -->
-      <section v-if="computedWeekMetricsList && computedWeekMetricsList.length > 0" class="dashboard-section">
+      <section v-if="computedWeekMetricsList && computedWeekMetricsList.length > 0" class="dashboard-section card">
         <div class="section-header">
           <h2 class="section-title">
             <span class="title-icon">📆</span>
@@ -1214,7 +1242,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
         <section
           v-for="sectionKey in effectiveMonthlySectionKeys"
           :key="'month-' + sectionKey"
-          class="dashboard-section"
+          class="dashboard-section card"
         >
           <div class="section-header">
             <h2 class="section-title">
@@ -1358,7 +1386,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
         <section
           v-for="sectionKey in effectiveYearlySectionKeys"
           :key="'year-' + sectionKey"
-          class="dashboard-section"
+          class="dashboard-section card"
         >
           <div class="section-header">
             <h2 class="section-title">

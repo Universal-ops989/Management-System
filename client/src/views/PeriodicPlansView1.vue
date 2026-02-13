@@ -17,7 +17,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="filters-section">
+    <div class="filters compact-filters inline-controls">
       <div class="filter-group">
         <label>Month:</label>
         <input
@@ -56,7 +56,7 @@
 
     <!-- Table -->
     <div v-else class="table-container">
-      <table class="periodic-plans-table">
+      <table class="table">
         <thead>
           <tr>
             <th>User</th>
@@ -260,9 +260,7 @@ const loadData = async () => {
   try {
     // Load users
     const usersResponse = await fetchUsers();
-    if (usersResponse.ok && usersResponse.data) {
-      allUsers.value = usersResponse.data.users || [];
-    }
+    allUsers.value = usersResponse.users || [];
 
     // Load periodic plans
     const filters = {};
@@ -523,7 +521,7 @@ onMounted(() => {
     </div>
 
     <!-- Filters -->
-    <div class="filters-section">
+    <div class="filters compact-filters inline-controls">
       <div class="filter-group">
         <label>Period:</label>
         <select
@@ -574,7 +572,7 @@ onMounted(() => {
 
     <!-- Table -->
     <div v-else class="table-container">
-      <table class="periodic-plans-table">
+      <table class="table">
         <thead>
           <tr>
             <th>User</th>

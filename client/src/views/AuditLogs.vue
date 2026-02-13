@@ -10,7 +10,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="filters-section">
+    <div class="filters compact-filters inline-controls">
       <div class="filters-grid">
         <div class="filter-group">
           <label>Action Type</label>
@@ -83,7 +83,7 @@
 
     <!-- Logs Table -->
     <div v-else class="logs-table-container">
-      <table class="logs-table">
+      <table class="table">
         <thead>
           <tr>
             <th>Timestamp</th>
@@ -426,16 +426,19 @@ onMounted(() => {
 }
 
 .filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: center;
 }
 
 .filter-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  flex: 1 1 220px;
+  min-width: 160px;
 }
 
 .filter-group label {
@@ -463,7 +466,14 @@ onMounted(() => {
 
 .filter-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+@media (max-width: 720px) {
+  .filters-grid { flex-direction: column; align-items: stretch; }
+  .filter-actions { justify-content: flex-start; margin-left: 0; }
 }
 
 /* Logs Table */

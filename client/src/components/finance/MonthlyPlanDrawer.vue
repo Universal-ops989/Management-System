@@ -108,9 +108,7 @@ const loadData = async () => {
 
   try {
     const usersResponse = await fetchUsers();
-    if (usersResponse.ok && usersResponse.data) {
-      allUsers.value = usersResponse.data.users || [];
-    }
+    allUsers.value = usersResponse.users || [];
 
     if (props.plan.month) {
       await loadPeriodicPlans({

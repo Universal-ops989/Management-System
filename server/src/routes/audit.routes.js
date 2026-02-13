@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from '../middleware/auth.middleware.js';
 import AuditLog from '../models/AuditLog.js';
 import { createErrorResponse, createSuccessResponse } from '../utils/errors.js';
 import { hasAdminPrivileges, ROLES, normalizeRole } from '../utils/roleMapper.js';
+import { getDegreeDisplayName } from '../constants/roles.js';
 
 const router = express.Router();
 
@@ -63,6 +64,7 @@ router.get('/audit-logs', requireAuth, async (req, res, next) => {
         name: log.actorUserId.name,
         group: log.actorUserId.group,
         degree: log.actorUserId.degree,
+        degreeLabel: getDegreeDisplayName(log.actorUserId.degree),
         role: log.actorUserId.role
       } : null,
       action: log.action,

@@ -45,7 +45,7 @@ const validatePersonalProfile = (data, isUpdate = false) => {
 
 export const listPersonalProfiles = async (req, res, next) => {
   try {
-    const { status, search, page = 1, limit = 20 } = req.query;
+    const { status, search, group, country, page = 1, limit = 20 } = req.query;
     const role = normalizeRole(req.user.role);
 
     // if (![ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.BOSS].includes(role)) {
@@ -55,6 +55,8 @@ export const listPersonalProfiles = async (req, res, next) => {
     const query = {};
 
     if (status) query.status = status;
+    if (group) query.group = group;
+    if (country) query.country = country;
 
     if (search) {
       query.$or = [

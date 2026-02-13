@@ -10,7 +10,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="filters-section">
+    <div class="filters compact-filters inline-controls">
       <div class="filter-group">
         <label>Year:</label>
         <select v-model="selectedYear" @change="loadData" class="filter-select">
@@ -37,8 +37,8 @@
     <!-- Main Content: Left-Right Layout -->
     <div v-else class="main-content">
       <!-- Left Section: Users List -->
-      <div class="left-section">
-        <div class="section-header">
+      <div class="left-section card">
+        <div class="section-header card">
           <h2>Users</h2>
         </div>
         
@@ -74,13 +74,13 @@
       </div>
 
       <!-- Right Section: Monthly Plans for Selected User -->
-      <div class="right-section">
-        <div class="section-header">
+      <div class="right-section card">
+        <div class="section-header card">
           <h2>
             {{ getSectionTitle() }}
           </h2>
           <button
-            v-if="isBoss && selectedUserId && selectedUserId !== 'all'"
+            v-if="canManageSelectedUser && selectedUserId && selectedUserId !== 'all'"
             @click="openCreateModal"
             class="btn-primary btn-small"
           >
@@ -100,7 +100,7 @@
             class="year-group"
           >
             <h3 class="year-header">{{ yearGroup.year }}</h3>
-            <table class="plans-table">
+            <table class="table">
               <thead>
                 <tr>
                   <th v-if="selectedUserId === 'all'">Month</th>
@@ -188,7 +188,7 @@
     <MonthlyPlanDrawer
       v-if="selectedPlan"
       :plan="selectedPlan"
-      :read-only="!isBoss"
+      :read-only="!canManageSelectedUser"
       @close="closePlanDrawer"
       @updated="handlePlanUpdated"
     />
@@ -211,14 +211,51 @@ import { useAuthStore } from '../composables/useAuth';
 import { fetchUsers } from '../services/users';
 import { excludeSuperAdmin } from '../utils/userFilters';
 import { formatCurrency, formatMonth, getCurrentMonth } from '../utils/financeHelpers';
+import { ROLES, normalizeRole } from '../constants/roles.js';
 import MonthlyPlanDrawer from '../components/finance/MonthlyPlanDrawer.vue';
 import MonthlyPlanModal from '../components/finance/MonthlyPlanModal.vue';
 
 const authStore = useAuthStore();
-const isBoss = computed(() => {
-  const role = authStore.user?.role;
-  return role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'BOSS';
-});
+
+// --------------------------------------------------
+// Finance permissions (who can manage whose plans)
+// --------------------------------------------------
+
+const currentUser = computed(() => authStore.user || {});
+const currentRole = computed(() => normalizeRole(currentUser.value.role));
+const currentDegree = computed(() => currentUser.value.degree || '');
+const currentGroup = computed(() => currentUser.value.group || '');
+const currentUserId = computed(() => currentUser.value._id || currentUser.value.id || '');
+
+const isGlobalFinanceAdmin = computed(() =>
+  currentRole.value === ROLES.SUPER_ADMIN ||
+  (currentRole.value === ROLES.ADMIN && currentDegree.value === 'ADMIN')
+);
+
+const isTeamBoss = computed(() => currentDegree.value === 'TEAM_BOSS');
+
+const isMemberUser = computed(() =>
+  currentRole.value === ROLES.MEMBER || currentRole.value === ROLES.GUEST
+);
+
+const canManageUser = (user) => {
+  if (!user) return false;
+
+  const targetId = user._id || user.id;
+  const targetGroup = user.group || '';
+
+  if (isGlobalFinanceAdmin.value) return true;
+
+  if (isTeamBoss.value) {
+    return !!currentGroup.value && targetGroup === currentGroup.value;
+  }
+
+  if (isMemberUser.value) {
+    return !!currentUserId.value && targetId === currentUserId.value;
+  }
+
+  return false;
+};
 
 const {
   monthlyPlans,
@@ -417,9 +454,22 @@ const selectAllUsers = () => {
 
 const selectUser = (user) => {
   const userId = user._id || user.id;
+  if (!canManageUser(user)) return;
   selectedUserId.value = userId;
   selectedUser.value = user;
 };
+
+const selectedUserObject = computed(() => {
+  if (!selectedUserId.value || selectedUserId.value === 'all') return null;
+  return allUsers.value.find(
+    u => (u._id || u.id) === selectedUserId.value
+  ) || null;
+});
+
+const canManageSelectedUser = computed(() => {
+  if (!selectedUserObject.value) return false;
+  return canManageUser(selectedUserObject.value);
+});
 
 const openCreateModal = () => {
   editingPlan.value = null;
@@ -461,13 +511,12 @@ const loadData = async () => {
   try {
     // Load users
     const usersResponse = await fetchUsers();
-    if (usersResponse.ok && usersResponse.data) {
-      allUsers.value = excludeSuperAdmin(usersResponse.data.users || []);
-      
-      // Auto-select "All" if none selected
-      if (!selectedUserId.value) {
-        selectAllUsers();
-      }
+    const rawUsers = excludeSuperAdmin(usersResponse.users || []);
+    // Scope visible users to what current user is allowed to manage
+    allUsers.value = rawUsers.filter(canManageUser);
+    // Auto-select "All" if none selected
+    if (!selectedUserId.value) {
+      selectAllUsers();
     }
 
     // Load ALL monthly plans initially (without user filter) so counts work for all users
