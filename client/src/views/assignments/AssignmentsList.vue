@@ -15,7 +15,7 @@
     </div>
 
     <!-- FILTERS -->
-    <div class="filters card">
+    <div class="filters card inline-controls">
       <div class="filter-group">
         <label>Search</label>
         <input type="text" v-model="filters.search" placeholder="Title or description" @input="onFilterChange" />
@@ -87,7 +87,7 @@
 
     <!-- TABLE -->
     <div v-else class="card table-container">
-      <table class="assignments-table">
+      <table class="table">
         <thead>
           <tr>
             <th>Group</th>
@@ -103,7 +103,9 @@
 
         <tbody>
           <tr v-for="a in assignments" :key="a._id">
-            <td>{{ formatGroupLabel(a?.group) }}</td>
+            <td>
+              <span class="badge badge-primary">{{ formatGroupLabel(a?.group) }}</span>
+            </td>
             <td v-if="isAdminUser">
               <div class="member-name">
                 {{ a.ownerUserId?.name || '—' }}

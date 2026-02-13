@@ -61,14 +61,20 @@ const weeklyMetrics = computed(() => {
 <template>
   <div class="finance-overview">
     <!-- Filters -->
-    <div class="filters">
-      <select v-model="selectedScope">
-        <option value="week">Weekly</option>
-        <option value="month">Monthly</option>
-        <option value="year">Yearly</option>
-      </select>
+    <div class="filters inline-controls">
+      <div class="filter-group">
+        <label>Scope</label>
+        <select v-model="selectedScope" class="filter-select">
+          <option value="week">Weekly</option>
+          <option value="month">Monthly</option>
+          <option value="year">Yearly</option>
+        </select>
+      </div>
 
-      <input type="month" v-model="selectedMonth" />
+      <div class="filter-group">
+        <label>Month</label>
+        <input type="month" v-model="selectedMonth" class="filter-input" />
+      </div>
     </div>
 
     <!-- KPI Cards -->

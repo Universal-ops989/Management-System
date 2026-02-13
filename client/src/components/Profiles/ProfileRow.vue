@@ -1,7 +1,7 @@
 <template>
   <tr class="table-row-clickable" @click="$emit('view', profile)">
     <td>
-      <span>{{ formatGroupLabel(profile.group) }}</span>
+      <span class="badge badge-primary">{{ formatGroupLabel(profile.group) }}</span>
     </td>
     <td>
       <div class="name-cell">

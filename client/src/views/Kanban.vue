@@ -118,12 +118,8 @@ const loadUsersAndProfiles = async () => {
       profileService.fetchJobProfiles({ status: 'active' })
     ]);
 
-    if (usersResponse.ok && usersResponse.data) {
-      users.value = usersResponse.data.users || [];
-    }
-    if (profilesResponse.ok && profilesResponse.data) {
-      profiles.value = profilesResponse.data.profiles || [];
-    }
+    users.value = usersResponse.users || [];
+    profiles.value = profilesResponse.profiles || [];
   } catch (err) {
     console.error('Failed to load users/profiles:', err);
   }

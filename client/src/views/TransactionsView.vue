@@ -10,7 +10,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="filters-section">
+    <div class="filters compact-filters inline-controls">
       <div class="filter-group">
         <label>Date From:</label>
         <input
@@ -92,7 +92,7 @@
     <div v-else class="main-content">
       <!-- Left Section: Users List -->
       <div class="left-section">
-        <div class="section-header">
+        <div class="section-header card">
           <h2>Users</h2>
         </div>
         
@@ -117,12 +117,12 @@
 
       <!-- Right Section: Transactions for Selected User -->
       <div class="right-section">
-        <div class="section-header">
+        <div class="section-header card">
           <h2>
             {{ selectedUser ? `Transactions - ${selectedUser.name || selectedUser.email}` : 'Select a User' }}
           </h2>
           <button
-            v-if="isBoss && selectedUserId"
+            v-if="canManageSelectedUser"
             @click="openCreateModal"
             class="btn-primary btn-small"
           >
@@ -137,7 +137,7 @@
         <div v-else class="transactions-content">
           <TransactionsTable
             :transactions="filteredTransactions"
-            :read-only="!isBoss"
+            :read-only="!canManageSelectedUser"
             :users="allUsers"
             @edit="handleEdit"
             @accept="handleAccept"
@@ -186,14 +186,57 @@ import { useFinance } from '../composables/useFinance';
 import { useAuthStore } from '../composables/useAuth';
 import { fetchUsers } from '../services/users';
 import { excludeSuperAdmin } from '../utils/userFilters';
+import { ROLES, normalizeRole } from '../constants/roles.js';
 import TransactionsTable from '../components/finance/TransactionsTable.vue';
 import TransactionModal from '../components/finance/TransactionModal.vue';
 
 const authStore = useAuthStore();
-const isBoss = computed(() => {
-  const role = authStore.user?.role;
-  return role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'BOSS';
-});
+
+// --------------------------------------------------
+// Finance permissions (who can manage whose data)
+// --------------------------------------------------
+
+const currentUser = computed(() => authStore.user || {});
+const currentRole = computed(() => normalizeRole(currentUser.value.role));
+const currentDegree = computed(() => currentUser.value.degree || '');
+const currentGroup = computed(() => currentUser.value.group || '');
+const currentUserId = computed(() => currentUser.value._id || currentUser.value.id || '');
+
+// Super admin, or admin with ADMIN degree → global finance admin
+const isGlobalFinanceAdmin = computed(() =>
+  currentRole.value === ROLES.SUPER_ADMIN ||
+  (currentRole.value === ROLES.ADMIN && currentDegree.value === 'ADMIN')
+);
+
+// Team boss (degree based) → limited to their own group
+const isTeamBoss = computed(() => currentDegree.value === 'TEAM_BOSS');
+
+// Regular members/guests → only their own data
+const isMemberUser = computed(() =>
+  currentRole.value === ROLES.MEMBER || currentRole.value === ROLES.GUEST
+);
+
+const canManageUser = (user) => {
+  if (!user) return false;
+
+  const targetId = user._id || user.id;
+  const targetGroup = user.group || '';
+
+  if (isGlobalFinanceAdmin.value) return true;
+
+  if (isTeamBoss.value) {
+    // Team bosses can manage members in their own group
+    return !!currentGroup.value && targetGroup === currentGroup.value;
+  }
+
+  if (isMemberUser.value) {
+    // Members can only manage their own data
+    return !!currentUserId.value && targetId === currentUserId.value;
+  }
+
+  // Fallback: be strict
+  return false;
+};
 
 const {
   transactions,
@@ -294,12 +337,29 @@ const getTransactionsCountForUser = (userId) => {
 
 const selectUser = (user) => {
   const userId = user._id || user.id;
+  // Guard: only allow selecting users the current user can manage
+  if (!canManageUser(user)) {
+    return;
+  }
+
   selectedUserId.value = userId;
   selectedUser.value = user;
   filters.value.page = 1; // Reset to first page
   // Load transactions for the selected user
   loadData();
 };
+
+const selectedUserObject = computed(() => {
+  if (!selectedUserId.value) return null;
+  return allUsers.value.find(
+    u => (u._id || u.id) === selectedUserId.value
+  ) || null;
+});
+
+const canManageSelectedUser = computed(() => {
+  if (!selectedUserObject.value) return false;
+  return canManageUser(selectedUserObject.value);
+});
 
 const debounceLoad = () => {
   clearTimeout(debounceTimer);
@@ -367,21 +427,22 @@ const loadData = async () => {
     // Load users first if not already loaded
     if (allUsers.value.length === 0) {
       const usersResponse = await fetchUsers();
-      if (usersResponse.ok && usersResponse.data) {
-        allUsers.value = excludeSuperAdmin(usersResponse.data.users || []);
-        
-        // Auto-select first user if none selected
-        if (!selectedUserId.value && allUsers.value.length > 0) {
-          const userId = allUsers.value[0]._id || allUsers.value[0].id;
-          selectedUserId.value = userId;
-          selectedUser.value = allUsers.value[0];
-          filters.value.page = 1;
-        }
+      const rawUsers = excludeSuperAdmin(usersResponse.users || []);
+      // Scope visible users to what current user is allowed to manage
+      allUsers.value = rawUsers.filter(canManageUser);
+
+      // Auto-select first manageable user if none selected
+      if (!selectedUserId.value && allUsers.value.length > 0) {
+        const first = allUsers.value[0];
+        const userId = first._id || first.id;
+        selectedUserId.value = userId;
+        selectedUser.value = first;
+        filters.value.page = 1;
       }
     }
 
-    // Load ALL transactions initially (without memberId filter) so counts work for all users
-    // This is similar to how MonthlyPlansView loads all plans first
+    // Load ALL transactions initially (without memberId filter) so counts work
+    // for all users that this viewer is allowed to see
     await loadAllTransactionsForCounts();
 
     // Build query filters for selected user's transactions (for display)
