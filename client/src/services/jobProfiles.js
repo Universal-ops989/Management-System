@@ -8,6 +8,7 @@ export const fetchJobProfiles = async (filters = {}) => {
   const params = new URLSearchParams();
   if (filters.search) params.append('search', filters.search);
   if (filters.status) params.append('status', filters.status);
+  if (filters.group) params.append('group', filters.group);
   if (filters.owner) params.append('owner', filters.owner);
   if (filters.page) params.append('page', filters.page);
   if (filters.limit) params.append('limit', filters.limit);

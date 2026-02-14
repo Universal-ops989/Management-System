@@ -5,7 +5,7 @@
         <label>Member</label>
         <select v-model="localFilters.member" @change="updateFilters">
           <option value="">All Members</option>
-          <option v-for="user in users" :key="user._id" :value="user._id">
+          <option v-for="user in users" :key="user._id || user.id" :value="user._id || user.id">
             {{ user.name || user.email }}
           </option>
         </select>

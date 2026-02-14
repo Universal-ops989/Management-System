@@ -36,12 +36,33 @@
 
     <!-- Main Content: Left-Right Layout -->
     <div v-else class="main-content">
-      <!-- Left Section: Users List -->
+      <!-- Left Section: Scope select + Name search + Users List -->
       <div class="left-section card">
         <div class="section-header card">
           <h2>Users</h2>
         </div>
-        
+
+        <div class="users-filters">
+          <div class="filter-group">
+            <label>Scope</label>
+            <select v-model="userGroupFilter" class="filter-select">
+              <option value="all">All members</option>
+              <option v-for="g in ENTITY_GROUP_OPTIONS" :key="g.value" :value="g.value">
+                {{ g.label }}
+              </option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>User name search</label>
+            <input
+              v-model="userNameSearch"
+              type="text"
+              class="filter-input"
+              placeholder="Search by name or email"
+            />
+          </div>
+        </div>
+
         <div class="users-list">
           <!-- All Users Option -->
           <div
@@ -54,9 +75,9 @@
             </div>
           </div>
 
-          <!-- Individual Users -->
+          <!-- Individual Users (filtered by scope + search) -->
           <div
-            v-for="user in allUsers"
+            v-for="user in displayedUsers"
             :key="user._id || user.id"
             :class="['user-item', { active: selectedUserId === (user._id || user.id) }]"
             @click="selectUser(user)"
@@ -67,8 +88,8 @@
             </div>
           </div>
 
-          <div v-if="allUsers.length === 0" class="empty-state">
-            No users found
+          <div v-if="displayedUsers.length === 0" class="empty-state">
+            {{ usersInScope.length === 0 ? 'No users in this scope' : 'No users match your search' }}
           </div>
         </div>
       </div>
@@ -212,6 +233,7 @@ import { fetchUsers } from '../services/users';
 import { excludeSuperAdmin } from '../utils/userFilters';
 import { formatCurrency, formatMonth, getCurrentMonth } from '../utils/financeHelpers';
 import { ROLES, normalizeRole } from '../constants/roles.js';
+import { ENTITY_GROUP_OPTIONS } from '../constants/groups.js';
 import MonthlyPlanDrawer from '../components/finance/MonthlyPlanDrawer.vue';
 import MonthlyPlanModal from '../components/finance/MonthlyPlanModal.vue';
 
@@ -268,12 +290,33 @@ const selectedYear = ref(new Date().getFullYear().toString());
 const selectedUserId = ref('');
 const selectedUser = ref(null);
 const allUsers = ref([]);
+const userGroupFilter = ref('all');
+const userNameSearch = ref('');
 const selectedPlan = ref(null);
 const showModal = ref(false);
 const editingPlan = ref(null);
 const currency = ref('USD');
 
 /* -------------------- COMPUTED -------------------- */
+
+/** Users in the selected scope: all members or only the selected group */
+const usersInScope = computed(() => {
+  const list = allUsers.value || [];
+  if (!userGroupFilter.value || userGroupFilter.value === 'all') return list;
+  return list.filter(u => (u.group || '') === userGroupFilter.value);
+});
+
+/** Users to display: scope filtered by name/email search */
+const displayedUsers = computed(() => {
+  const list = usersInScope.value;
+  const q = (userNameSearch.value || '').trim().toLowerCase();
+  if (!q) return list;
+  return list.filter(u => {
+    const name = (u.name || '').toLowerCase();
+    const email = (u.email || '').toLowerCase();
+    return name.includes(q) || email.includes(q);
+  });
+});
 
 const plansForSelectedUser = computed(() => {
   if (!selectedUserId.value) {
@@ -648,8 +691,44 @@ onMounted(() => {
   margin: 0;
 }
 
+.users-filters {
+  padding: 12px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.users-filters .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.users-filters .filter-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.users-filters .filter-select,
+.users-filters .filter-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.users-filters .filter-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
 .users-list {
-  max-height: calc(100vh - 300px);
+  max-height: calc(100vh - 380px);
   overflow-y: auto;
 }
 

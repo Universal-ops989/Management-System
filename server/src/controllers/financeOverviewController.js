@@ -346,7 +346,7 @@ const buildFullByUserArray = (users, byUserObj) =>
 
 export const getFinanceMetrics = async (req, res, next) => {
   try {
-    const { memberId, start, end } = req.query;
+    const { memberId, start, end, group } = req.query;
     const isAllMembers = memberId === 'all';
 
     if (!start || !end) {
@@ -383,9 +383,14 @@ export const getFinanceMetrics = async (req, res, next) => {
        LOAD USERS (SOURCE OF TRUTH)
     ====================================================== */
 
-    const users = await User.find(
-      isAllMembers ? { role: { $ne: 'SUPER_ADMIN' } } : { _id: userObjectId, role: { $ne: 'SUPER_ADMIN' } }
-    )
+    const userQuery = isAllMembers
+      ? { role: { $ne: 'SUPER_ADMIN' } }
+      : { _id: userObjectId, role: { $ne: 'SUPER_ADMIN' } };
+    if (isAllMembers && group && group.trim() !== '') {
+      userQuery.group = group.trim();
+    }
+
+    const users = await User.find(userQuery)
       .select('_id name email role group')
       .lean();
 
@@ -399,11 +404,10 @@ export const getFinanceMetrics = async (req, res, next) => {
     if (!isAllMembers) {
       txQuery.userId = userObjectId;
     } else {
-      // Exclude transactions from super admin users when fetching all members
-      const superAdminUsers = await User.find({ role: 'SUPER_ADMIN' }).select('_id').lean();
-      const superAdminIds = superAdminUsers.map(u => u._id);
-      if (superAdminIds.length > 0) {
-        txQuery.userId = { $nin: superAdminIds };
+      // When all members (optionally filtered by group), only include transactions for those users
+      const userIds = users.map(u => u._id);
+      if (userIds.length > 0) {
+        txQuery.userId = { $in: userIds };
       }
     }
 
@@ -426,7 +430,7 @@ export const getFinanceMetrics = async (req, res, next) => {
 
     const yearlyPlans = await MonthlyFinancialPlan.find(
       isAllMembers
-        ? { month: { $regex: `^${year}` } }
+        ? { month: { $regex: `^${year}` }, userId: { $in: users.map(u => u._id) } }
         : { userId: userObjectId, month: { $regex: `^${year}` } }
     ).lean();
 
@@ -470,7 +474,7 @@ export const getFinanceMetrics = async (req, res, next) => {
 
     const monthlyPlans = await MonthlyFinancialPlan.find(
       isAllMembers
-        ? { month: monthKey }
+        ? { month: monthKey, userId: { $in: users.map(u => u._id) } }
         : { userId: userObjectId, month: monthKey }
     ).lean();
 
@@ -518,7 +522,7 @@ export const getFinanceMetrics = async (req, res, next) => {
 
     const weeklyPlans = await PeriodicFinancialPlan.find(
       isAllMembers
-        ? { periodId: { $in: periodIds } }
+        ? { periodId: { $in: periodIds }, userId: { $in: users.map(u => u._id) } }
         : { userId: userObjectId, periodId: { $in: periodIds } }
     )
       .populate('periodId')

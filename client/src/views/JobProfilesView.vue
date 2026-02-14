@@ -24,6 +24,12 @@
         />
       </div>
       <div class="filter-group">
+        <select v-model="groupFilter" @change="handleFilterChange" class="filter-select">
+          <option value="">All Groups</option>
+          <option v-for="g in entityGroupOptions" :key="g.value" :value="g.value">{{ g.label }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
         <select v-model="statusFilter" @change="handleFilterChange" class="filter-select">
           <option value="">All Status</option>
           <option value="active">Active</option>
@@ -73,6 +79,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useAuthStore } from '../composables/useAuth';
 import { normalizeRole, ROLES } from '../constants/roles.js';
+import { ENTITY_GROUP_OPTIONS } from '../constants/groups.js';
 import ProfileTable from '../components/Profiles/ProfileTable.vue';
 import ProfileModal from '../components/Profiles/ProfileModal/ProfileModal.vue';
 import ProfileDrawer from '../components/Profiles/ProfileDrawer/ProfileDrawer.vue';
@@ -85,6 +92,9 @@ const editingProfile = ref(null);
 const saving = ref(false);
 const searchQuery = ref('');
 const statusFilter = ref('');
+const groupFilter = ref('');
+
+const entityGroupOptions = ENTITY_GROUP_OPTIONS;
 
 let searchTimeout = null;
 
@@ -104,7 +114,8 @@ const loadProfiles = async () => {
   // Update filters in store
   store.dispatch('jobProfiles/setFilters', {
     search: searchQuery.value,
-    status: statusFilter.value
+    status: statusFilter.value,
+    group: groupFilter.value
   });
   
   // Fetch profiles

@@ -44,7 +44,7 @@
         <label>Member</label>
         <select v-model="filters.user" @change="onFilterChange">
           <option value="">All members</option>
-          <option v-for="u in users" :key="u._id" :value="u._id">
+          <option v-for="u in users" :key="u._id || u.id" :value="u._id || u.id">
             {{ u.name || u.email }}
           </option>
         </select>
@@ -180,10 +180,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 import * as assignmentService from '../../services/assignments';
+import * as userService from '../../services/users';
 import { ENTITY_GROUP_OPTIONS, formatGroupLabel } from '../../constants/groups.js';
 
 const router = useRouter();
@@ -242,6 +243,16 @@ const loadAssignments = async () => {
   }
 };
 
+const loadUsers = async () => {
+  if (!isAdminUser.value) return;
+  try {
+    const res = await userService.fetchUsers({ limit: 1000 });
+    users.value = res.users || res.data?.users || [];
+  } catch (err) {
+    users.value = [];
+  }
+};
+
 const onFilterChange = () => {
   pagination.value.page = 1;
   loadAssignments();
@@ -286,7 +297,14 @@ const isOwner = (a) =>
 const formatDate = (d) =>
   new Date(d).toLocaleDateString();
 
-onMounted(loadAssignments);
+watch(isAdminUser, (isAdmin) => {
+  if (isAdmin && users.value.length === 0) loadUsers();
+}, { immediate: true });
+
+onMounted(async () => {
+  await loadAssignments();
+  await loadUsers();
+});
 </script>
 
 <style scoped>

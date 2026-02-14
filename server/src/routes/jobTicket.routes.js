@@ -2,6 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import JobTicket, { TICKET_STAGES, CLOSED_STAGES } from '../models/JobTicket.js';
+import JobProfile from '../models/JobProfile.js';
 import { createErrorResponse, createSuccessResponse } from '../utils/errors.js';
 import { log as auditLog, getRequestMeta } from '../utils/audit.js';
 import { normalizeRole, ROLES } from '../utils/roleMapper.js';
@@ -53,6 +54,7 @@ router.get('/', async (req, res, next) => {
       search,
       dateFrom,
       dateTo,
+      member,
       page = '1',
       limit = '20'
     } = req.query;
@@ -62,7 +64,16 @@ router.get('/', async (req, res, next) => {
 
     // All authenticated users can see all tickets (no assignedUserId filtering)
 
-    if (profile) {
+    // Filter by member: tickets whose job profile is owned by this user
+    if (member) {
+      const profileIds = await JobProfile.find({ ownerUserId: member }).distinct('_id');
+      if (profile) {
+        const allowed = profileIds.some((id) => id.toString() === profile);
+        query.jobProfileId = allowed ? profile : { $in: [] };
+      } else {
+        query.jobProfileId = profileIds.length ? { $in: profileIds } : { $in: [] };
+      }
+    } else if (profile) {
       query.jobProfileId = profile;
     }
 

@@ -52,7 +52,7 @@ const validateJobProfile = (data, isUpdate = false) => {
  */
 export const listJobProfiles = async (req, res, next) => {
   try {
-    const { status, owner, search, page = '1', limit = '20' } = req.query;
+    const { status, owner, search, group, page = '1', limit = '20' } = req.query;
     const user = req.user;
 
     const query = {};
@@ -66,6 +66,10 @@ export const listJobProfiles = async (req, res, next) => {
     // Apply filters
     if (status) {
       query.status = status;
+    }
+
+    if (group && ENTITY_GROUP_VALUES.includes(group)) {
+      query.group = group;
     }
 
     if (owner && (userRole === ROLES.ADMIN || userRole === ROLES.SUPER_ADMIN)) {

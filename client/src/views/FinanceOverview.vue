@@ -21,7 +21,6 @@ const FINANCE_SECTION_GROUPS = ['GROUP_1', 'GROUP_2', 'GROUP_3', 'GROUP_4']
 
 // UI filters for users (finance page)
 const userGroupFilter = ref('all')
-const userNameFilter = ref('')
 let userFilterDebounce = null
 
 /* ===============================
@@ -40,9 +39,10 @@ const effectiveMemberId = computed(() => {
   return 'all'
 })
 
-/** For ranking/grouped API: only member gets own data; admin and super need 'all' to split by group */
+/** For ranking API: when a specific member is selected, use them; otherwise member = own, admin/super = 'all' */
 const effectiveRankingMemberId = computed(() => {
   if (isMember.value && currentUserId.value) return currentUserId.value
+  if (selectedMemberId.value && selectedMemberId.value !== 'all') return selectedMemberId.value
   return 'all'
 })
 
@@ -133,13 +133,11 @@ const loadFinanceOverview = async () => {
 
     // Overview: member sees only own data; admin/super use selectedMemberId (or 'all')
     const memberIdForApi = isMember.value ? effectiveMemberId.value : selectedMemberId.value
-    const res = await apiClient.get('finance/finance-overview', {
-      params: {
-        start,
-        end,
-        memberId: memberIdForApi
-      }
-    })
+    const params = { start, end, memberId: memberIdForApi }
+    if (memberIdForApi === 'all' && userGroupFilter.value && userGroupFilter.value !== 'all') {
+      params.group = userGroupFilter.value
+    }
+    const res = await apiClient.get('finance/finance-overview', { params })
 
     metrics.value = res.data.data.metrics
     console.log('Finance Overview API Response:', res.data.data)
@@ -216,17 +214,16 @@ const loadFinanceOverview = async () => {
   }
 }
 
-// Load ranking data: Super Admin/Admin get all; Member gets only own
+// Load ranking data: uses same member/group selection as overview (single member = only that member's data)
 const loadRankingData = async () => {
   try {
     const { start, end } = getMonthRange(selectedMonth.value)
-    const res = await apiClient.get('finance/finance-overview', {
-      params: {
-        start,
-        end,
-        memberId: effectiveRankingMemberId.value
-      }
-    })
+    const memberId = effectiveRankingMemberId.value
+    const params = { start, end, memberId }
+    if (memberId === 'all' && userGroupFilter.value && userGroupFilter.value !== 'all') {
+      params.group = userGroupFilter.value
+    }
+    const res = await apiClient.get('finance/finance-overview', { params })
     rankingMetrics.value = res.data.data.metrics
   } catch (err) {
     console.error('Failed to load ranking data:', err)
@@ -237,7 +234,6 @@ const loadUsers = async () => {
   try {
     const params = { limit: 1000 }
     if (userGroupFilter.value && userGroupFilter.value !== 'all') params.group = userGroupFilter.value
-    if (userNameFilter.value && userNameFilter.value.trim() !== '') params.search = userNameFilter.value.trim()
 
     const res = await fetchUsers(params);
     // Exclude super admin from user list
@@ -261,21 +257,22 @@ onMounted(() => {
   loadRankingData()
 })
 
-// debounce user filters to auto-refresh users list
-watch([userGroupFilter, userNameFilter], () => {
+// When group changes: refresh user list and reset member to "all" so group data is shown
+watch([userGroupFilter], () => {
   if (userFilterDebounce) clearTimeout(userFilterDebounce)
   userFilterDebounce = setTimeout(() => {
+    selectedMemberId.value = 'all'
     loadUsers()
   }, 300)
 })
 
-// Watch selectedMonth and selectedMemberId for overview section (first section)
-watch([selectedMonth, selectedMemberId], () => {
+// Watch selectedMonth, selectedMemberId, and userGroupFilter for overview section
+watch([selectedMonth, selectedMemberId, userGroupFilter], () => {
   loadFinanceOverview()
 }, { immediate: false })
 
-// Watch only selectedMonth for ranking sections (monthly and yearly rankings)
-watch([selectedMonth], () => {
+// Watch selectedMonth and selectedMemberId for ranking (when member changes, show only that member's data)
+watch([selectedMonth, selectedMemberId], () => {
   loadRankingData()
 }, { immediate: false })
 
@@ -322,15 +319,12 @@ const getIncomeDistributionData = (metricsData) => {
   if (!metricsData?.byUser?.length) return []
 
   const data = metricsData.byUser.map(user => ({
-    label: user.user.name || user.user.email,
-    value: user.actualIncome
+    label: user.user?.name || user.user?.email || 'Member',
+    value: user.actualIncome ?? 0
   }))
 
-  const total = data.reduce((s, i) => s + i.value, 0)
-
-  return total === 0
-    ? [{ label: 'No income yet', value: 1 }]
-    : data
+  const total = data.reduce((s, i) => s + (i.value ?? 0), 0)
+  return total === 0 ? [{ label: 'No income yet', value: 1 }] : data
 }
 // Computed for ranking chart data (by actual income)
 const getRankingData = (metricsData) => {
@@ -342,11 +336,10 @@ const getRankingData = (metricsData) => {
 
   return filteredByUser
     .map(user => ({
-      label: user.user.name || user.user.email,
-      value: user.actualIncome
+      label: user.user?.name || user.user?.email || 'Member',
+      value: user.actualIncome ?? 0
     }))
-    .filter(item => item.value >= 0)
-    .sort((a, b) => b.value - a.value) // Sort descending
+    .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
 }
 
 // Computed for profit ranking chart data
@@ -359,14 +352,13 @@ const getProfitRankingData = (metricsData) => {
 
   return filteredByUser
     .map(user => {
-      const profit = (user.actualIncome || 0) - (user.actualExpense || 0)
+      const profit = (user.actualIncome ?? 0) - (user.actualExpense ?? 0)
       return {
-        label: user.user.name || user.user.email,
-        value: profit
+        label: user.user?.name || user.user?.email || 'Member',
+        value: profit ?? 0
       }
     })
-    // Include all members, even with 0 values
-    .sort((a, b) => b.value - a.value) // Sort descending
+    .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
 }
 
 // Computed for progress ranking chart data
@@ -379,24 +371,22 @@ const getProgressRankingData = (metricsData) => {
 
   return filteredByUser
     .map(user => {
-      const income = user.actualIncome || 0
-      const outcome = user.actualExpense || 0
+      const income = user.actualIncome ?? 0
+      const outcome = user.actualExpense ?? 0
       const profit = income - outcome
-      const pending = user.pendingIncome || 0
-      const plan = user.target || 0
+      const pending = user.pendingIncome ?? 0
+      const plan = user.target ?? 0
 
-      // Calculate progress percentage: (total profit + pending amount / 2) / total plan * 100
       const progressPercentage = plan > 0
         ? Math.round(((profit + pending / 2) / plan) * 100)
         : 0
 
       return {
-        label: user.user.name || user.user.email,
-        value: Math.max(0, progressPercentage) // Allow > 100%
+        label: user.user?.name || user.user?.email || 'Member',
+        value: Math.max(0, progressPercentage ?? 0)
       }
     })
-    // Include all members, even with 0% progress
-    .sort((a, b) => b.value - a.value) // Sort descending
+    .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
 }
 
 // Filter byUser array by group ('all' = no filter)
@@ -422,22 +412,21 @@ const getUserSummaryData = (metricsData) => {
 
   return filteredByUser
     .map(user => {
-      const income = user.actualIncome || 0
-      const outcome = user.actualExpense || 0
+      const income = user.actualIncome ?? 0
+      const outcome = user.actualExpense ?? 0
       const profit = income - outcome
-      const pending = user.pendingIncome || 0
-      const plan = user.target || 0
+      const pending = user.pendingIncome ?? 0
+      const plan = user.target ?? 0
       const resultAmount = profit - plan
 
-      // Calculate progress percentage: (total profit + pending amount / 2) / total plan * 100
       const progressPercentage = plan > 0
         ? Math.round(((profit + pending / 2) / plan) * 100)
         : 0
 
       return {
-        userId: user.user._id || user.user.id,
-        name: user.user.name || user.user.email,
-        email: user.user.email,
+        userId: user.user?._id || user.user?.id,
+        name: user.user?.name || user.user?.email,
+        email: user.user?.email,
         group: user.user?.group || 'NONE',
         income,
         outcome,
@@ -445,10 +434,10 @@ const getUserSummaryData = (metricsData) => {
         pending,
         plan,
         resultAmount,
-        progressPercentage: Math.max(0, progressPercentage) // Allow > 100%
+        progressPercentage: Math.max(0, progressPercentage)
       }
     })
-    .sort((a, b) => b.profit - a.profit) // Sort by profit descending
+    .sort((a, b) => (b.profit ?? 0) - (a.profit ?? 0))
 }
 
 // Computed for target achievement pie chart
@@ -456,13 +445,15 @@ const getTargetAchievementData = (metricsData) => {
   if (!metricsData?.total) return []
 
   const total = metricsData.total
-  const achieved = total.actualIncome
-  const remaining = Math.max(0, total.target - achieved)
+  const achieved = total.actualIncome ?? 0
+  const target = total.target ?? 0
+  const remaining = Math.max(0, target - achieved)
 
   return [
     { label: 'Achieved', value: achieved },
     { label: 'Remaining', value: remaining }
-  ].filter(item => item.value >= 0)
+  ].map(item => ({ ...item, value: item.value ?? 0 }))
+    .filter(item => item.value >= 0)
 }
 
 // Computed for performance breakdown pie chart
@@ -471,10 +462,10 @@ const getPerformanceBreakdownData = (metricsData) => {
 
   const total = metricsData.total
   return [
-    { label: 'Actual Income', value: total.actualIncome },
-    { label: 'Pending Income', value: total.pendingIncome },
-    { label: 'Actual Expense', value: total.actualExpense }
-  ].filter(item => item.value >= 0)
+    { label: 'Actual Income', value: total.actualIncome ?? 0 },
+    { label: 'Pending Income', value: total.pendingIncome ?? 0 },
+    { label: 'Actual Expense', value: total.actualExpense ?? 0 }
+  ].filter(item => (item.value ?? 0) >= 0)
 }
 
 // Ranking metrics (always all members)
@@ -608,65 +599,101 @@ const getUserDisplayName = (userId) => {
 const memberMonthlySectionKeys = ['me', 'total']
 const memberYearlySectionKeys = ['me', 'total']
 
+/** When a specific member is selected, show only that member's data (single-member view) */
+const isSingleMemberSelected = computed(() =>
+  (isSuperAdmin.value || isAdmin.value) && selectedMemberId.value && selectedMemberId.value !== 'all'
+)
+
+/** When a specific group is selected in the filter, show only that group's section (not Group 1, 2, 4, etc.) */
+const isSingleGroupFilterSelected = computed(() =>
+  (isSuperAdmin.value || isAdmin.value) &&
+  userGroupFilter.value &&
+  userGroupFilter.value !== 'all' &&
+  !isSingleMemberSelected.value
+)
+
 /** Role-based: which section keys to show for monthly ranking */
 const effectiveMonthlySectionKeys = computed(() => {
+  if (isSingleMemberSelected.value) return memberMonthlySectionKeys
+  if (isSingleGroupFilterSelected.value) return [userGroupFilter.value]
   if (isSuperAdmin.value) return superAdminMonthlySectionKeys.value
   if (isAdmin.value) return adminMonthlySectionKeys.value
   return memberMonthlySectionKeys
 })
 const effectiveYearlySectionKeys = computed(() => {
+  if (isSingleMemberSelected.value) return memberYearlySectionKeys
+  if (isSingleGroupFilterSelected.value) return [userGroupFilter.value]
   if (isSuperAdmin.value) return superAdminYearlySectionKeys.value
   if (isAdmin.value) return adminYearlySectionKeys.value
   return memberYearlySectionKeys
 })
 
+const selectedMemberDisplayName = computed(() => {
+  if (!selectedMemberId.value || selectedMemberId.value === 'all') return ''
+  const u = usersInScope.value.find(x => (x._id || x.id) === selectedMemberId.value)
+  if (u) return u.name || u.email || 'Member'
+  const byUser = rankingMonthMetrics.value?.byUser || []
+  const first = byUser.find(x => (x.user?._id || x.user?.id) === selectedMemberId.value)
+  return first?.user?.name || first?.user?.email || 'Member'
+})
+
 const effectiveMonthSectionTitle = (key) => {
+  if (isSingleMemberSelected.value) return key === 'me' ? (selectedMemberDisplayName.value || 'Member') : 'Total'
   if (isSuperAdmin.value) return key === 'all' ? 'All Members' : formatGroupLabel(key)
   if (isAdmin.value) return getUserDisplayName(key)
   return key === 'me' ? 'My Data' : 'My Total'
 }
 const effectiveMonthProgressData = (key) => {
+  if (isSingleMemberSelected.value) return getMonthProgressRankingForSection('all')
   if (isSuperAdmin.value) return getMonthProgressRankingForSection(key)
   if (isAdmin.value) return getMonthProgressRankingForUser(key)
   return getMonthProgressRankingForSection('all')
 }
 const effectiveMonthProfitData = (key) => {
+  if (isSingleMemberSelected.value) return getMonthProfitRankingForSection('all')
   if (isSuperAdmin.value) return getMonthProfitRankingForSection(key)
   if (isAdmin.value) return getMonthProfitRankingForUser(key)
   return getMonthProfitRankingForSection('all')
 }
 const effectiveMonthUserSummary = (key) => {
+  if (isSingleMemberSelected.value) return monthUserSummaryData.value
   if (isSuperAdmin.value) return getMonthUserSummaryForSection(key)
   if (isAdmin.value) return getMonthUserSummaryForAdminSection(key)
   return monthUserSummaryData.value
 }
 const effectiveMonthSectionSubtitle = (key) => {
+  if (isSingleMemberSelected.value) return ''
   if (isSuperAdmin.value) return key === 'all' ? '' : `(${formatGroupLabel(key)})`
   if (isAdmin.value) return ''
   return ''
 }
 
 const effectiveYearSectionTitle = (key) => {
+  if (isSingleMemberSelected.value) return key === 'me' ? (selectedMemberDisplayName.value || 'Member') : 'Total'
   if (isSuperAdmin.value) return key === 'all' ? 'All Members' : formatGroupLabel(key)
   if (isAdmin.value) return getUserDisplayName(key)
   return key === 'me' ? 'My Data' : 'My Total'
 }
 const effectiveYearProgressData = (key) => {
+  if (isSingleMemberSelected.value) return getYearProgressRankingForSection('all')
   if (isSuperAdmin.value) return getYearProgressRankingForSection(key)
   if (isAdmin.value) return getYearProgressRankingForUser(key)
   return getYearProgressRankingForSection('all')
 }
 const effectiveYearProfitData = (key) => {
+  if (isSingleMemberSelected.value) return getYearProfitRankingForSection('all')
   if (isSuperAdmin.value) return getYearProfitRankingForSection(key)
   if (isAdmin.value) return getYearProfitRankingForUser(key)
   return getYearProfitRankingForSection('all')
 }
 const effectiveYearUserSummary = (key) => {
+  if (isSingleMemberSelected.value) return yearUserSummaryData.value
   if (isSuperAdmin.value) return getYearUserSummaryForSection(key)
   if (isAdmin.value) return getYearUserSummaryForAdminSection(key)
   return yearUserSummaryData.value
 }
 const effectiveYearSectionSubtitle = (key) => {
+  if (isSingleMemberSelected.value) return ''
   if (isSuperAdmin.value) return key === 'all' ? '' : `(${formatGroupLabel(key)})`
   return ''
 }
@@ -698,7 +725,8 @@ const weekPerformanceBreakdown = computed(() => getPerformanceBreakdownData(sele
 
 // Helper function to format amount
 const formatAmount = (amount) => {
-  return parseFloat(amount || 0).toFixed(2)
+  const n = Number(amount ?? 0)
+  return (Number.isNaN(n) ? 0 : n).toFixed(2)
 }
 
 // Helper function to get progress badge class
@@ -938,10 +966,6 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               <option value="all">All</option>
               <option v-for="g in FINANCE_SECTION_GROUPS" :key="g" :value="g">{{ formatGroupLabel(g) }}</option>
             </select>
-          </label>
-          <label class="filter-item filter-group">
-            <span class="filter-label">Name:</span>
-            <input type="text" v-model="userNameFilter" class="filter-input" placeholder="Search name or email" />
           </label>
           <label v-if="isSuperAdmin || isAdmin" class="filter-item filter-group">
             <span class="filter-label">Member:</span>
